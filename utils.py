@@ -14,6 +14,8 @@ def save_result_gif(env, model, path, filename, frames_to_save=100):
     :param frames_to_save: length in frames for the gif
     :return:
     """
+    if not os.path.exists(path):
+        os.makedirs(path)
     print("Saving results.")
     obs = env.reset()
     frames = []

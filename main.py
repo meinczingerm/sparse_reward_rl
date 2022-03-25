@@ -4,32 +4,33 @@ import gym
 
 from stable_baselines3 import A2C, HER, DQN, SAC
 
+from eval import CustomEvalCallback
 from utils import save_result_gif, setup_training
 
 config = {
     "model": {
-        "name": "SAC",
+        "name": "DQN",
         "kwargs": {
             "policy": "MlpPolicy",
             "verbose": 1,
-            "buffer_size": 100
+            "buffer_size": 10000
         }
     },
-    "env": "Reacher-v2"
+    "env": "LunarLander-v2"
 }
 
 
 def train():
     env, model, log_dir = setup_training(config)
 
-    print("Starting to learn")
-    model.learn(total_timesteps=int(100))
-    print("Finished learning")
+    eval_env = gym.make(config['env'])
+    # Use deterministic actions for evaluation
+    eval_path = os.path.join(log_dir, 'train_eval')
+    eval_callback = CustomEvalCallback(eval_env, best_model_save_path=eval_path,
+                                 log_path=eval_path, eval_freq=100000,
+                                 deterministic=True, render=False)
 
-    save_result_gif(env, model, log_dir, 'result_video.gif')
-
-
-
+    model.learn(5000000, callback=eval_callback)
 
 if __name__ == '__main__':
     train()

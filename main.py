@@ -1,22 +1,35 @@
+import os
+
 import gym
 
 from stable_baselines3 import A2C, HER, DQN, SAC
 
-from utils import save_result_gif, get_project_root_path
+from utils import save_result_gif, setup_training
+
+config = {
+    "model": {
+        "name": "SAC",
+        "kwargs": {
+            "policy": "MlpPolicy",
+            "verbose": 1,
+            "buffer_size": 100
+        }
+    },
+    "env": "Reacher-v2"
+}
 
 
-def main():
-    env = gym.make('Reacher-v2')
+def train():
+    env, model, log_dir = setup_training(config)
 
+    print("Starting to learn")
+    model.learn(total_timesteps=int(100))
+    print("Finished learning")
 
-    model = SAC('MlpPolicy', env, verbose=1, tensorboard_log="/home/mark/tum/2022ss/master_thesis/playground/logs")
-    model.learn(total_timesteps=int(100000))
-
-    save_result_gif(env, model, '')
+    save_result_gif(env, model, log_dir, 'result_video.gif')
 
 
 
 
 if __name__ == '__main__':
-
-    main()
+    train()

@@ -2,6 +2,8 @@ import os
 
 import gym
 from stable_baselines3 import *
+from stable_baselines3.common.env_util import make_vec_env
+from stable_baselines3.common.vec_env import SubprocVecEnv
 
 
 def save_result_gif(env, model, path, filename, frames_to_save=100):
@@ -99,13 +101,13 @@ def save_dict(data_dict, path):
     import json
 
     with open(path, 'w') as f:
-        json.dump(data_dict, f)
+        json.dump(str(data_dict), f)
 
 def setup_training(config):
     print("creating env")
-    env = gym.make(config["env"])
+    env = make_vec_env(config['env']['name'], n_envs=config['env']['env_num'])
 
-    log_dir = create_log_dir('sandcastle')
+    log_dir = create_log_dir('fetch_slide')
     config['model']['kwargs']['tensorboard_log'] = log_dir
     save_dict(config, os.path.join(log_dir, 'config.json'))
 

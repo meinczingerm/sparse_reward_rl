@@ -103,6 +103,7 @@ def save_dict(data_dict, path):
     with open(path, 'w') as f:
         json.dump(str(data_dict), f)
 
+
 def setup_training(config):
     print("creating env")
     env = make_vec_env(config['env']['name'], n_envs=config['env']['env_num'])

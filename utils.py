@@ -58,7 +58,7 @@ def get_project_root_path():
     import pathlib
     import os
     work_dir = pathlib.Path().resolve()
-    root_dir = os.path.join(str(work_dir).split('thesis_playground')[0], 'thesis_playground')
+    root_dir = os.path.join(str(work_dir).split('master_thesis')[0], 'master_thesis')
 
     return root_dir
 

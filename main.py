@@ -11,7 +11,35 @@ from multiprocessing import Pool
 
 configs =[
     {"model": {
-        "name": "SAC",
+        "name": "DDPG",
+        "kwargs": {
+            "policy": "MultiInputPolicy",
+            "verbose": 1,
+            "buffer_size": 100000,
+            "replay_buffer_class": HerReplayBuffer,
+            "replay_buffer_kwargs": {"goal_selection_strategy": "final",
+                                     "n_sampled_goal": 1}
+        }
+    },
+    "env": {
+        'name': "FetchPush-v1",
+        'env_num': 1}},
+    {"model": {
+        "name": "DDPG",
+        "kwargs": {
+            "policy": "MultiInputPolicy",
+            "verbose": 1,
+            "buffer_size": 100000,
+            "replay_buffer_class": HerReplayBuffer,
+            "replay_buffer_kwargs": {"goal_selection_strategy": "final",
+                                     "n_sampled_goal": 2}
+        }
+    },
+    "env": {
+        'name': "FetchPickAndPlace-v1",
+        'env_num': 1}},
+    {"model": {
+        "name": "DDPG",
         "kwargs": {
             "policy": "MultiInputPolicy",
             "verbose": 1,
@@ -23,45 +51,7 @@ configs =[
     "env": {
         'name': "FetchSlide-v1",
         'env_num': 1}},
-    {"model": {
-        "name": "SAC",
-        "kwargs": {
-            "policy": "MultiInputPolicy",
-            "verbose": 1,
-            "buffer_size": 100000,
-            "replay_buffer_class": HerReplayBuffer,
-        }
-    },
-    "env": {
-        'name': "FetchSlide-v1",
-        'env_num': 1}},
-    {"model": {
-        "name": "SAC",
-        "kwargs": {
-            "policy": "MultiInputPolicy",
-            "verbose": 1,
-            "buffer_size": 100000,
-        }
-    },
-        "env": {
-            'name': "FetchSlide-v1",
-            'env_num': 1}}
 ]
-config = {
-    "model": {
-        "name": "SAC",
-        "kwargs": {
-            "policy": "MultiInputPolicy",
-            "verbose": 1,
-            "buffer_size": 10000,
-            "replay_buffer_class": HerReplayBuffer,
-            "replay_buffer_kwargs": {"goal_selection_strategy": "final"}
-        }
-    },
-    "env": {
-        'name': "FetchSlide-v1",
-        'env_num': 1}
-}
 
 
 def train(_config):

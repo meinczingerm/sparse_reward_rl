@@ -92,7 +92,7 @@ def create_log_dir(directory_name):
     else:
         latest_version = max(versions)
     directory_name_with_version = f"{directory_name}_{latest_version+1}"
-    new_directory_path = os.path.join(get_project_root_path(), 'logs', directory_name_with_version)
+    new_directory_path = os.path.join(get_project_root_path(), 'her_comparison_logs', directory_name_with_version)
     os.makedirs(new_directory_path)
     return new_directory_path
 
@@ -108,7 +108,7 @@ def setup_training(config):
     print("creating env")
     env = make_vec_env(config['env']['name'], n_envs=config['env']['env_num'])
 
-    log_dir = create_log_dir('fetch_slide')
+    log_dir = create_log_dir(config['env']['name'])
     config['model']['kwargs']['tensorboard_log'] = log_dir
     save_dict(config, os.path.join(log_dir, 'config.json'))
 

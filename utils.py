@@ -83,7 +83,7 @@ def fix_env_creation():
 
 def create_log_dir(directory_name):
     """Creates a directory with defined name and added version number ({directory_name}_v{x) inside the logs folder"""
-    logs_path = os.path.join(get_project_root_path(), 'logs')
+    logs_path = os.path.join(get_project_root_path(), 'her_comparison_logs')
     current_dirs = os.listdir(logs_path)
     current_dirs_with_same_name = [dir for dir in current_dirs if dir.startswith(directory_name)]
     versions = [int(dir.split('_')[-1]) for dir in current_dirs_with_same_name]

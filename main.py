@@ -2,9 +2,10 @@ import os
 
 import gym
 
-from stable_baselines3 import A2C, HerReplayBuffer, DQN, SAC
+from stable_baselines3 import A2C, HerReplayBuffer, DQN, SAC, DDPG
+from stable_baselines3.common.callbacks import CallbackList, EvalCallback
 
-from eval import CustomEvalCallback
+from eval import EvalVideoCallback
 from utils import save_result_gif, setup_training
 
 from multiprocessing import Pool
@@ -14,12 +15,20 @@ configs =[
         "name": "DDPG",
         "kwargs": {
             "policy": "MultiInputPolicy",
+            "buffer_size": 1000000,
+            "batch_size": 2048,
+            "gamma": 0.95,
+            "learning_rate": float(1e-3),
+            "tau": 0.05,
             "verbose": 1,
-            "buffer_size": 100000,
             "replay_buffer_class": HerReplayBuffer,
-            "replay_buffer_kwargs": {"goal_selection_strategy": "final",
-                                     "n_sampled_goal": 1}
+            "replay_buffer_kwargs":{
+                "online_sampling": True,
+                "goal_selection_strategy": 'future',
+                "n_sampled_goal": 4},
+            "policy_kwargs": {"net_arch":[512, 512, 512], "n_critics":2}
         }
+
     },
     "env": {
         'name': "FetchPush-v1",
@@ -28,11 +37,18 @@ configs =[
         "name": "DDPG",
         "kwargs": {
             "policy": "MultiInputPolicy",
+            "buffer_size": 1000000,
+            "batch_size": 2048,
+            "gamma": 0.95,
+            "learning_rate": float(1e-3),
+            "tau": 0.05,
             "verbose": 1,
-            "buffer_size": 100000,
             "replay_buffer_class": HerReplayBuffer,
-            "replay_buffer_kwargs": {"goal_selection_strategy": "final",
-                                     "n_sampled_goal": 2}
+            "replay_buffer_kwargs":{
+                "online_sampling": True,
+                "goal_selection_strategy": 'future',
+                "n_sampled_goal": 4},
+            "policy_kwargs": {"net_arch":[512, 512, 512], "n_critics":2}
         }
     },
     "env": {
@@ -42,10 +58,18 @@ configs =[
         "name": "DDPG",
         "kwargs": {
             "policy": "MultiInputPolicy",
+            "buffer_size": 1000000,
+            "batch_size": 2048,
+            "gamma": 0.95,
+            "learning_rate": float(1e-3),
+            "tau": 0.05,
             "verbose": 1,
-            "buffer_size": 100000,
             "replay_buffer_class": HerReplayBuffer,
-            "replay_buffer_kwargs": {"goal_selection_strategy": "final"}
+            "replay_buffer_kwargs":{
+                "online_sampling": True,
+                "goal_selection_strategy": 'future',
+                "n_sampled_goal": 4},
+            "policy_kwargs": {"net_arch":[512, 512, 512], "n_critics":2}
         }
     },
     "env": {
@@ -60,11 +84,15 @@ def train(_config):
     eval_env = gym.make(_config['env']['name'])
     # Use deterministic actions for evaluation
     eval_path = os.path.join(log_dir, 'train_eval')
-    eval_callback = CustomEvalCallback(eval_env, best_model_save_path=eval_path,
-                                 log_path=eval_path, eval_freq=100000,
-                                 deterministic=True, render=False)
 
-    model.learn(50000000, callback=eval_callback)
+    video_callback = EvalVideoCallback(eval_env, best_model_save_path=eval_path,
+                                      log_path=eval_path, eval_freq=100000,
+                                      deterministic=True, render=False)
+    eval_callback = EvalCallback(eval_env, best_model_save_path=eval_path,
+                             log_path=eval_path, eval_freq=1000, n_eval_episodes=10, deterministic=True, render=False)
+    eval_callbacks = CallbackList([video_callback, eval_callback])
+
+    model.learn(50000000, callback=eval_callbacks)
 
 def run_parallel(_configs):
     pool = Pool(processes=len(_configs))
@@ -76,4 +104,5 @@ def run_parallel(_configs):
 
 
 if __name__ == '__main__':
-    run_parallel(_configs=configs)
+    train(configs[0])
+    # run_parallel(_configs=configs)

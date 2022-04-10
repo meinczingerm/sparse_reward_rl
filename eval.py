@@ -11,9 +11,8 @@ from stable_baselines3.common.vec_env import VecEnvWrapper, VecNormalize, sync_e
 from utils import save_result_gif
 
 
-class CustomEvalCallback(EvalCallback):
+class EvalVideoCallback(EvalCallback):
     def _on_step(self) -> bool:
-        super(CustomEvalCallback, self)._on_step()
         if self.eval_freq > 0 and self.n_calls % self.eval_freq == 0:
             self.custom_eval()
 

@@ -1,9 +1,7 @@
 import os
 
-import gym
 from stable_baselines3 import *
 from stable_baselines3.common.env_util import make_vec_env
-from stable_baselines3.common.vec_env import SubprocVecEnv
 
 
 def save_result_gif(env, model, path, filename, frames_to_save=100):

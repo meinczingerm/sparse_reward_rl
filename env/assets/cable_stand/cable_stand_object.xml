@@ -1,4 +1,4 @@
-﻿<mujoco model="base">
+<mujoco model="base">
     <compiler angle="radian" meshdir="/home/mark/tum/2022ss/thesis/robosuite_parts_collection/meshes/"/>
     <size njmax="500" nconmax="100"/>
     <asset>
@@ -353,8 +353,6 @@
                 <body name="cable2_B0" pos="0.82348 -0.6278 1.0568" quat="0 -0.707107 0 0.707107">
                     <inertial pos="0 0 0" quat="0.707107 0 0.707107 0" mass="0.0019635"
                               diaginertia="1.14537e-07 1.14537e-07 2.45437e-08"/>
-                    <joint name="cable2_J0_0" pos="0.01 0 0" axis="0 1 0" group="3" damping="0.05"/>
-                    <joint name="cable2_J1_0" pos="0.01 0 0" axis="0 0 1" group="3" damping="0.05"/>
                     <geom name="cable2_G0" size="0.005 0.01" quat="0.707107 0 0.707107 0" type="capsule"
                           rgba="0.2 0.2 0.2 1" group="0"/>
                     <body name="cable2_B1" pos="0.02 0 0">

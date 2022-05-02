@@ -350,311 +350,342 @@
                         </body>
                     </body>
                 </body>
-                <body name="cable2_B1" pos="0.82348 -0.6278 1.0568" quat="0 -0.707107 0 0.707107">
+                <body name="cable2_B0" pos="0.82348 -0.6278 1.0568" quat="0 -0.707107 0 0.707107">
                     <inertial pos="0 0 0" quat="0.707107 0 0.707107 0" mass="0.0019635"
                               diaginertia="1.14537e-07 1.14537e-07 2.45437e-08"/>
-                    <geom name="cable2_G1" size="0.005 0.01" quat="0.707107 0 0.707107 0" type="capsule"
+                    <joint name="cable2_J0_0" pos="0.01 0 0" axis="0 1 0" group="3" damping="0.05"/>
+                    <joint name="cable2_J1_0" pos="0.01 0 0" axis="0 0 1" group="3" damping="0.05"/>
+                    <geom name="cable2_G0" size="0.005 0.01" quat="0.707107 0 0.707107 0" type="capsule"
                           rgba="0.2 0.2 0.2 1" group="0"/>
-                    <body name="cable2_B2" pos="0.02 0 0">
+                    <body name="cable2_B1" pos="0.02 0 0">
                         <inertial pos="0 0 0" quat="0.707107 0 0.707107 0" mass="0.0019635"
                                   diaginertia="1.14537e-07 1.14537e-07 2.45437e-08"/>
-                        <joint name="cable2_J0_2" pos="-0.01 0 0" axis="0 1 0" group="3" damping="0.05"/>
-                        <joint name="cable2_J1_2" pos="-0.01 0 0" axis="0 0 1" group="3" damping="0.05"/>
-                        <geom name="cable2_G2" size="0.005 0.01" quat="0.707107 0 0.707107 0" type="capsule"
+                        <geom name="cable2_G1" size="0.005 0.01" quat="0.707107 0 0.707107 0" type="capsule"
                               rgba="0.2 0.2 0.2 1" group="0"/>
-                        <body name="cable2_B3" pos="0.02 0 0">
+                        <body name="cable2_B2" pos="0.02 0 0">
                             <inertial pos="0 0 0" quat="0.707107 0 0.707107 0" mass="0.0019635"
                                       diaginertia="1.14537e-07 1.14537e-07 2.45437e-08"/>
-                            <joint name="cable2_J0_3" pos="-0.01 0 0" axis="0 1 0" group="3" damping="0.05"/>
-                            <joint name="cable2_J1_3" pos="-0.01 0 0" axis="0 0 1" group="3" damping="0.05"/>
-                            <geom name="cable2_G3" size="0.005 0.01" quat="0.707107 0 0.707107 0" type="capsule"
+                            <joint name="cable2_J0_2" pos="-0.01 0 0" axis="0 1 0" group="3" damping="0.05"/>
+                            <joint name="cable2_J1_2" pos="-0.01 0 0" axis="0 0 1" group="3" damping="0.05"/>
+                            <geom name="cable2_G2" size="0.005 0.01" quat="0.707107 0 0.707107 0" type="capsule"
                                   rgba="0.2 0.2 0.2 1" group="0"/>
-                            <body name="cable2_B4" pos="0.02 0 0">
+                            <body name="cable2_B3" pos="0.02 0 0">
                                 <inertial pos="0 0 0" quat="0.707107 0 0.707107 0" mass="0.0019635"
                                           diaginertia="1.14537e-07 1.14537e-07 2.45437e-08"/>
-                                <joint name="cable2_J0_4" pos="-0.01 0 0" axis="0 1 0" group="3" damping="0.05"/>
-                                <joint name="cable2_J1_4" pos="-0.01 0 0" axis="0 0 1" group="3" damping="0.05"/>
-                                <geom name="cable2_G4" size="0.005 0.01" quat="0.707107 0 0.707107 0" type="capsule"
+                                <joint name="cable2_J0_3" pos="-0.01 0 0" axis="0 1 0" group="3" damping="0.05"/>
+                                <joint name="cable2_J1_3" pos="-0.01 0 0" axis="0 0 1" group="3" damping="0.05"/>
+                                <geom name="cable2_G3" size="0.005 0.01" quat="0.707107 0 0.707107 0" type="capsule"
                                       rgba="0.2 0.2 0.2 1" group="0"/>
-                                <body name="cable2_B5" pos="0.02 0 0">
+                                <body name="cable2_B4" pos="0.02 0 0">
                                     <inertial pos="0 0 0" quat="0.707107 0 0.707107 0" mass="0.0019635"
                                               diaginertia="1.14537e-07 1.14537e-07 2.45437e-08"/>
-                                    <joint name="cable2_J0_5" pos="-0.01 0 0" axis="0 1 0" group="3" damping="0.05"/>
-                                    <joint name="cable2_J1_5" pos="-0.01 0 0" axis="0 0 1" group="3" damping="0.05"/>
-                                    <geom name="cable2_G5" size="0.005 0.01" quat="0.707107 0 0.707107 0" type="capsule"
+                                    <joint name="cable2_J0_4" pos="-0.01 0 0" axis="0 1 0" group="3" damping="0.05"/>
+                                    <joint name="cable2_J1_4" pos="-0.01 0 0" axis="0 0 1" group="3" damping="0.05"/>
+                                    <geom name="cable2_G4" size="0.005 0.01" quat="0.707107 0 0.707107 0" type="capsule"
                                           rgba="0.2 0.2 0.2 1" group="0"/>
-                                    <body name="cable2_B6" pos="0.02 0 0">
+                                    <body name="cable2_B5" pos="0.02 0 0">
                                         <inertial pos="0 0 0" quat="0.707107 0 0.707107 0" mass="0.0019635"
                                                   diaginertia="1.14537e-07 1.14537e-07 2.45437e-08"/>
-                                        <joint name="cable2_J0_6" pos="-0.01 0 0" axis="0 1 0" group="3"
+                                        <joint name="cable2_J0_5" pos="-0.01 0 0" axis="0 1 0" group="3"
                                                damping="0.05"/>
-                                        <joint name="cable2_J1_6" pos="-0.01 0 0" axis="0 0 1" group="3"
+                                        <joint name="cable2_J1_5" pos="-0.01 0 0" axis="0 0 1" group="3"
                                                damping="0.05"/>
-                                        <geom name="cable2_G6" size="0.005 0.01" quat="0.707107 0 0.707107 0"
-                                              type="capsule" rgba="0.2 0.2 0.2 1" group="0"/>
-                                        <body name="cable2_B7" pos="0.02 0 0">
+                                        <geom name="cable2_G5" size="0.005 0.01" quat="0.707107 0 0.707107 0"
+                                              type="capsule"
+                                              rgba="0.2 0.2 0.2 1" group="0"/>
+                                        <body name="cable2_B6" pos="0.02 0 0">
                                             <inertial pos="0 0 0" quat="0.707107 0 0.707107 0" mass="0.0019635"
                                                       diaginertia="1.14537e-07 1.14537e-07 2.45437e-08"/>
-                                            <joint name="cable2_J0_7" pos="-0.01 0 0" axis="0 1 0" group="3"
+                                            <joint name="cable2_J0_6" pos="-0.01 0 0" axis="0 1 0" group="3"
                                                    damping="0.05"/>
-                                            <joint name="cable2_J1_7" pos="-0.01 0 0" axis="0 0 1" group="3"
+                                            <joint name="cable2_J1_6" pos="-0.01 0 0" axis="0 0 1" group="3"
                                                    damping="0.05"/>
-                                            <geom name="cable2_G7" size="0.005 0.01" quat="0.707107 0 0.707107 0"
+                                            <geom name="cable2_G6" size="0.005 0.01" quat="0.707107 0 0.707107 0"
                                                   type="capsule" rgba="0.2 0.2 0.2 1" group="0"/>
-                                            <body name="cable2_B8" pos="0.02 0 0">
+                                            <body name="cable2_B7" pos="0.02 0 0">
                                                 <inertial pos="0 0 0" quat="0.707107 0 0.707107 0" mass="0.0019635"
                                                           diaginertia="1.14537e-07 1.14537e-07 2.45437e-08"/>
-                                                <joint name="cable2_J0_8" pos="-0.01 0 0" axis="0 1 0" group="3"
+                                                <joint name="cable2_J0_7" pos="-0.01 0 0" axis="0 1 0" group="3"
                                                        damping="0.05"/>
-                                                <joint name="cable2_J1_8" pos="-0.01 0 0" axis="0 0 1" group="3"
+                                                <joint name="cable2_J1_7" pos="-0.01 0 0" axis="0 0 1" group="3"
                                                        damping="0.05"/>
-                                                <geom name="cable2_G8" size="0.005 0.01" quat="0.707107 0 0.707107 0"
+                                                <geom name="cable2_G7" size="0.005 0.01" quat="0.707107 0 0.707107 0"
                                                       type="capsule" rgba="0.2 0.2 0.2 1" group="0"/>
-                                                <body name="cable2_B9" pos="0.02 0 0">
+                                                <body name="cable2_B8" pos="0.02 0 0">
                                                     <inertial pos="0 0 0" quat="0.707107 0 0.707107 0" mass="0.0019635"
                                                               diaginertia="1.14537e-07 1.14537e-07 2.45437e-08"/>
-                                                    <joint name="cable2_J0_9" pos="-0.01 0 0" axis="0 1 0" group="3"
+                                                    <joint name="cable2_J0_8" pos="-0.01 0 0" axis="0 1 0" group="3"
                                                            damping="0.05"/>
-                                                    <joint name="cable2_J1_9" pos="-0.01 0 0" axis="0 0 1" group="3"
+                                                    <joint name="cable2_J1_8" pos="-0.01 0 0" axis="0 0 1" group="3"
                                                            damping="0.05"/>
-                                                    <geom name="cable2_G9" size="0.005 0.01"
-                                                          quat="0.707107 0 0.707107 0" type="capsule"
-                                                          rgba="0.2 0.2 0.2 1" group="0"/>
-                                                    <body name="cable2_B10" pos="0.02 0 0">
+                                                    <geom name="cable2_G8" size="0.005 0.01"
+                                                          quat="0.707107 0 0.707107 0"
+                                                          type="capsule" rgba="0.2 0.2 0.2 1" group="0"/>
+                                                    <body name="cable2_B9" pos="0.02 0 0">
                                                         <inertial pos="0 0 0" quat="0.707107 0 0.707107 0"
                                                                   mass="0.0019635"
                                                                   diaginertia="1.14537e-07 1.14537e-07 2.45437e-08"/>
-                                                        <joint name="cable2_J0_10" pos="-0.01 0 0" axis="0 1 0"
-                                                               group="3" damping="0.05"/>
-                                                        <joint name="cable2_J1_10" pos="-0.01 0 0" axis="0 0 1"
-                                                               group="3" damping="0.05"/>
-                                                        <geom name="cable2_G10" size="0.005 0.01"
+                                                        <joint name="cable2_J0_9" pos="-0.01 0 0" axis="0 1 0" group="3"
+                                                               damping="0.05"/>
+                                                        <joint name="cable2_J1_9" pos="-0.01 0 0" axis="0 0 1" group="3"
+                                                               damping="0.05"/>
+                                                        <geom name="cable2_G9" size="0.005 0.01"
                                                               quat="0.707107 0 0.707107 0" type="capsule"
                                                               rgba="0.2 0.2 0.2 1" group="0"/>
-                                                        <body name="cable2_B11" pos="0.02 0 0">
+                                                        <body name="cable2_B10" pos="0.02 0 0">
                                                             <inertial pos="0 0 0" quat="0.707107 0 0.707107 0"
                                                                       mass="0.0019635"
                                                                       diaginertia="1.14537e-07 1.14537e-07 2.45437e-08"/>
-                                                            <joint name="cable2_J0_11" pos="-0.01 0 0" axis="0 1 0"
+                                                            <joint name="cable2_J0_10" pos="-0.01 0 0" axis="0 1 0"
                                                                    group="3" damping="0.05"/>
-                                                            <joint name="cable2_J1_11" pos="-0.01 0 0" axis="0 0 1"
+                                                            <joint name="cable2_J1_10" pos="-0.01 0 0" axis="0 0 1"
                                                                    group="3" damping="0.05"/>
-                                                            <geom name="cable2_G11" size="0.005 0.01"
+                                                            <geom name="cable2_G10" size="0.005 0.01"
                                                                   quat="0.707107 0 0.707107 0" type="capsule"
                                                                   rgba="0.2 0.2 0.2 1" group="0"/>
-                                                            <body name="cable2_B12" pos="0.02 0 0">
+                                                            <body name="cable2_B11" pos="0.02 0 0">
                                                                 <inertial pos="0 0 0" quat="0.707107 0 0.707107 0"
                                                                           mass="0.0019635"
                                                                           diaginertia="1.14537e-07 1.14537e-07 2.45437e-08"/>
-                                                                <joint name="cable2_J0_12" pos="-0.01 0 0" axis="0 1 0"
+                                                                <joint name="cable2_J0_11" pos="-0.01 0 0" axis="0 1 0"
                                                                        group="3" damping="0.05"/>
-                                                                <joint name="cable2_J1_12" pos="-0.01 0 0" axis="0 0 1"
+                                                                <joint name="cable2_J1_11" pos="-0.01 0 0" axis="0 0 1"
                                                                        group="3" damping="0.05"/>
-                                                                <geom name="cable2_G12" size="0.005 0.01"
+                                                                <geom name="cable2_G11" size="0.005 0.01"
                                                                       quat="0.707107 0 0.707107 0" type="capsule"
                                                                       rgba="0.2 0.2 0.2 1" group="0"/>
-                                                                <body name="cable2_B13" pos="0.02 0 0">
+                                                                <body name="cable2_B12" pos="0.02 0 0">
                                                                     <inertial pos="0 0 0" quat="0.707107 0 0.707107 0"
                                                                               mass="0.0019635"
                                                                               diaginertia="1.14537e-07 1.14537e-07 2.45437e-08"/>
-                                                                    <joint name="cable2_J0_13" pos="-0.01 0 0"
-                                                                           axis="0 1 0" group="3" damping="0.05"/>
-                                                                    <joint name="cable2_J1_13" pos="-0.01 0 0"
-                                                                           axis="0 0 1" group="3" damping="0.05"/>
-                                                                    <geom name="cable2_G13" size="0.005 0.01"
+                                                                    <joint name="cable2_J0_12" pos="-0.01 0 0"
+                                                                           axis="0 1 0"
+                                                                           group="3" damping="0.05"/>
+                                                                    <joint name="cable2_J1_12" pos="-0.01 0 0"
+                                                                           axis="0 0 1"
+                                                                           group="3" damping="0.05"/>
+                                                                    <geom name="cable2_G12" size="0.005 0.01"
                                                                           quat="0.707107 0 0.707107 0" type="capsule"
                                                                           rgba="0.2 0.2 0.2 1" group="0"/>
-                                                                    <body name="cable2_B14" pos="0.02 0 0">
+                                                                    <body name="cable2_B13" pos="0.02 0 0">
                                                                         <inertial pos="0 0 0"
                                                                                   quat="0.707107 0 0.707107 0"
                                                                                   mass="0.0019635"
                                                                                   diaginertia="1.14537e-07 1.14537e-07 2.45437e-08"/>
-                                                                        <joint name="cable2_J0_14" pos="-0.01 0 0"
+                                                                        <joint name="cable2_J0_13" pos="-0.01 0 0"
                                                                                axis="0 1 0" group="3" damping="0.05"/>
-                                                                        <joint name="cable2_J1_14" pos="-0.01 0 0"
+                                                                        <joint name="cable2_J1_13" pos="-0.01 0 0"
                                                                                axis="0 0 1" group="3" damping="0.05"/>
-                                                                        <geom name="cable2_G14" size="0.005 0.01"
+                                                                        <geom name="cable2_G13" size="0.005 0.01"
                                                                               quat="0.707107 0 0.707107 0"
-                                                                              type="capsule" rgba="0.2 0.2 0.2 1"
-                                                                              group="0"/>
-                                                                        <body name="cable2_B15" pos="0.02 0 0">
+                                                                              type="capsule"
+                                                                              rgba="0.2 0.2 0.2 1" group="0"/>
+                                                                        <body name="cable2_B14" pos="0.02 0 0">
                                                                             <inertial pos="0 0 0"
                                                                                       quat="0.707107 0 0.707107 0"
                                                                                       mass="0.0019635"
                                                                                       diaginertia="1.14537e-07 1.14537e-07 2.45437e-08"/>
-                                                                            <joint name="cable2_J0_15" pos="-0.01 0 0"
+                                                                            <joint name="cable2_J0_14" pos="-0.01 0 0"
                                                                                    axis="0 1 0" group="3"
                                                                                    damping="0.05"/>
-                                                                            <joint name="cable2_J1_15" pos="-0.01 0 0"
+                                                                            <joint name="cable2_J1_14" pos="-0.01 0 0"
                                                                                    axis="0 0 1" group="3"
                                                                                    damping="0.05"/>
-                                                                            <geom name="cable2_G15" size="0.005 0.01"
+                                                                            <geom name="cable2_G14" size="0.005 0.01"
                                                                                   quat="0.707107 0 0.707107 0"
                                                                                   type="capsule" rgba="0.2 0.2 0.2 1"
                                                                                   group="0"/>
-                                                                            <body name="cable2_B16" pos="0.02 0 0">
+                                                                            <body name="cable2_B15" pos="0.02 0 0">
                                                                                 <inertial pos="0 0 0"
                                                                                           quat="0.707107 0 0.707107 0"
                                                                                           mass="0.0019635"
                                                                                           diaginertia="1.14537e-07 1.14537e-07 2.45437e-08"/>
-                                                                                <joint name="cable2_J0_16"
-                                                                                       pos="-0.01 0 0" axis="0 1 0"
-                                                                                       group="3" damping="0.05"/>
-                                                                                <joint name="cable2_J1_16"
-                                                                                       pos="-0.01 0 0" axis="0 0 1"
-                                                                                       group="3" damping="0.05"/>
-                                                                                <geom name="cable2_G16"
+                                                                                <joint name="cable2_J0_15"
+                                                                                       pos="-0.01 0 0"
+                                                                                       axis="0 1 0" group="3"
+                                                                                       damping="0.05"/>
+                                                                                <joint name="cable2_J1_15"
+                                                                                       pos="-0.01 0 0"
+                                                                                       axis="0 0 1" group="3"
+                                                                                       damping="0.05"/>
+                                                                                <geom name="cable2_G15"
                                                                                       size="0.005 0.01"
                                                                                       quat="0.707107 0 0.707107 0"
                                                                                       type="capsule"
-                                                                                      rgba="0.2 0.2 0.2 1" group="0"/>
-                                                                                <body name="cable2_B17" pos="0.02 0 0">
+                                                                                      rgba="0.2 0.2 0.2 1"
+                                                                                      group="0"/>
+                                                                                <body name="cable2_B16" pos="0.02 0 0">
                                                                                     <inertial pos="0 0 0"
                                                                                               quat="0.707107 0 0.707107 0"
                                                                                               mass="0.0019635"
                                                                                               diaginertia="1.14537e-07 1.14537e-07 2.45437e-08"/>
-                                                                                    <joint name="cable2_J0_17"
+                                                                                    <joint name="cable2_J0_16"
                                                                                            pos="-0.01 0 0" axis="0 1 0"
                                                                                            group="3" damping="0.05"/>
-                                                                                    <joint name="cable2_J1_17"
+                                                                                    <joint name="cable2_J1_16"
                                                                                            pos="-0.01 0 0" axis="0 0 1"
                                                                                            group="3" damping="0.05"/>
-                                                                                    <geom name="cable2_G17"
+                                                                                    <geom name="cable2_G16"
                                                                                           size="0.005 0.01"
                                                                                           quat="0.707107 0 0.707107 0"
                                                                                           type="capsule"
                                                                                           rgba="0.2 0.2 0.2 1"
                                                                                           group="0"/>
-                                                                                    <body name="cable2_B18"
+                                                                                    <body name="cable2_B17"
                                                                                           pos="0.02 0 0">
                                                                                         <inertial pos="0 0 0"
                                                                                                   quat="0.707107 0 0.707107 0"
                                                                                                   mass="0.0019635"
                                                                                                   diaginertia="1.14537e-07 1.14537e-07 2.45437e-08"/>
-                                                                                        <joint name="cable2_J0_18"
+                                                                                        <joint name="cable2_J0_17"
                                                                                                pos="-0.01 0 0"
-                                                                                               axis="0 1 0" group="3"
+                                                                                               axis="0 1 0"
+                                                                                               group="3"
                                                                                                damping="0.05"/>
-                                                                                        <joint name="cable2_J1_18"
+                                                                                        <joint name="cable2_J1_17"
                                                                                                pos="-0.01 0 0"
-                                                                                               axis="0 0 1" group="3"
+                                                                                               axis="0 0 1"
+                                                                                               group="3"
                                                                                                damping="0.05"/>
-                                                                                        <geom name="cable2_G18"
+                                                                                        <geom name="cable2_G17"
                                                                                               size="0.005 0.01"
                                                                                               quat="0.707107 0 0.707107 0"
                                                                                               type="capsule"
                                                                                               rgba="0.2 0.2 0.2 1"
                                                                                               group="0"/>
-                                                                                        <body name="cable2_B19"
+                                                                                        <body name="cable2_B18"
                                                                                               pos="0.02 0 0">
                                                                                             <inertial pos="0 0 0"
                                                                                                       quat="0.707107 0 0.707107 0"
                                                                                                       mass="0.0019635"
                                                                                                       diaginertia="1.14537e-07 1.14537e-07 2.45437e-08"/>
-                                                                                            <joint name="cable2_J0_19"
+                                                                                            <joint name="cable2_J0_18"
                                                                                                    pos="-0.01 0 0"
                                                                                                    axis="0 1 0"
                                                                                                    group="3"
                                                                                                    damping="0.05"/>
-                                                                                            <joint name="cable2_J1_19"
+                                                                                            <joint name="cable2_J1_18"
                                                                                                    pos="-0.01 0 0"
                                                                                                    axis="0 0 1"
                                                                                                    group="3"
                                                                                                    damping="0.05"/>
-                                                                                            <geom name="cable2_G19"
+                                                                                            <geom name="cable2_G18"
                                                                                                   size="0.005 0.01"
                                                                                                   quat="0.707107 0 0.707107 0"
                                                                                                   type="capsule"
                                                                                                   rgba="0.2 0.2 0.2 1"
                                                                                                   group="0"/>
-                                                                                            <body name="mother_start"
-                                                                                                  pos="0.02 0 0"
-                                                                                                  quat="0 0.707107 0.707107 0">
-                                                                                                <site name="mother_grip"
-                                                                                                      pos="0 0.02 0"
-                                                                                                      size="0.005 0.005 0.005"
-                                                                                                      rgba="1 0 0 1"
-                                                                                                      type="box"
-                                                                                                      group="1"/>
-                                                                                                <inertial
-                                                                                                        pos="-6.05724e-10 0.0488878 -1.49571e-09"
-                                                                                                        quat="0.707107 0.707107 0 0"
-                                                                                                        mass="0.0168856"
-                                                                                                        diaginertia="1.16162e-05 1.16161e-05 5.57191e-07"/>
-                                                                                                <joint name="cable2_J0_20"
-                                                                                                       pos="0 0 0"
-                                                                                                       axis="1 0 0"
+                                                                                            <body name="cable2_B19"
+                                                                                                  pos="0.02 0 0">
+                                                                                                <inertial pos="0 0 0"
+                                                                                                          quat="0.707107 0 0.707107 0"
+                                                                                                          mass="0.0019635"
+                                                                                                          diaginertia="1.14537e-07 1.14537e-07 2.45437e-08"/>
+                                                                                                <joint name="cable2_J0_19"
+                                                                                                       pos="-0.01 0 0"
+                                                                                                       axis="0 1 0"
                                                                                                        group="3"
                                                                                                        damping="0.05"/>
-                                                                                                <joint name="cable2_J1_20"
-                                                                                                       pos="0 0 0"
-                                                                                                       axis="0 0 -1"
+                                                                                                <joint name="cable2_J1_19"
+                                                                                                       pos="-0.01 0 0"
+                                                                                                       axis="0 0 1"
                                                                                                        group="3"
                                                                                                        damping="0.05"/>
-                                                                                                <geom name="mother_contact"
-                                                                                                      pos="0 0.02 0"
-                                                                                                      size="0.01 0.02"
-                                                                                                      quat="0 0 0.7071068 0.7071068"
+                                                                                                <geom name="cable2_G19"
+                                                                                                      size="0.005 0.01"
+                                                                                                      quat="0.707107 0 0.707107 0"
                                                                                                       type="capsule"
-                                                                                                      group="0"
-                                                                                                      rgba="0.8 0.2 0.1 1"
-                                                                                                      condim="6"
-                                                                                                      friction="100000000 100000000 100000000"
-                                                                                                      priority="10"
-                                                                                                      solimp="0.99 0.99 0.0001 0.5 2"
-                                                                                                      solref="0.001 1"/>
-                                                                                                <geom type="mesh"
-                                                                                                      group="0"
-                                                                                                      rgba="0.792157 0.819608 0.933333 1"
-                                                                                                      mesh="mother_start"/>
-                                                                                                <geom pos="0 0.06 0"
-                                                                                                      quat="0.771453 0 0.636286 0"
-                                                                                                      type="mesh"
-                                                                                                      group="0"
-                                                                                                      rgba="0.79216 0.81961 0.93333 1"
-                                                                                                      mesh="mother_segment1"/>
-                                                                                                <geom pos="0 0.06 0"
-                                                                                                      quat="-0.469233 0 -0.883074 0"
-                                                                                                      type="mesh"
-                                                                                                      group="0"
-                                                                                                      rgba="0.792157 0.819608 0.933333 1"
-                                                                                                      mesh="mother_segment2"/>
-                                                                                                <geom pos="0 0.06 0"
-                                                                                                      quat="-0.0955772 0 -0.995422 0"
-                                                                                                      type="mesh"
-                                                                                                      group="0"
-                                                                                                      rgba="0.79216 0.81961 0.93333 1"
-                                                                                                      mesh="mother_segment3"/>
-                                                                                                <geom pos="0 0.06 0"
-                                                                                                      quat="0.29263 0 -0.956226 0"
-                                                                                                      type="mesh"
-                                                                                                      group="0"
-                                                                                                      rgba="0.79216 0.81961 0.93333 1"
-                                                                                                      mesh="mother_segment4"/>
-                                                                                                <geom pos="0 0.06 0"
-                                                                                                      quat="0.636286 0 -0.771453 0"
-                                                                                                      type="mesh"
-                                                                                                      group="0"
-                                                                                                      rgba="0.79216 0.81961 0.93333 1"
-                                                                                                      mesh="mother_segment5"/>
-                                                                                                <geom pos="0 0.06 0"
-                                                                                                      quat="0.883074 0 -0.469233 0"
-                                                                                                      type="mesh"
-                                                                                                      group="0"
-                                                                                                      rgba="0.79216 0.81961 0.93333 1"
-                                                                                                      mesh="mother_segment6"/>
-                                                                                                <geom pos="0 0.06 0"
-                                                                                                      quat="0.995422 0 -0.0955772 0"
-                                                                                                      type="mesh"
-                                                                                                      group="0"
-                                                                                                      rgba="0.79216 0.81961 0.93333 1"
-                                                                                                      mesh="mother_segment7"/>
-                                                                                                <geom pos="0 0.06 0"
-                                                                                                      quat="0.956226 0 0.29263 0"
-                                                                                                      type="mesh"
-                                                                                                      group="0"
-                                                                                                      rgba="0.79216 0.81961 0.93333 1"
-                                                                                                      mesh="mother_segment8"/>
+                                                                                                      rgba="0.2 0.2 0.2 1"
+                                                                                                      group="0"/>
+                                                                                                <body name="mother_start"
+                                                                                                      pos="0.02 0 0"
+                                                                                                      quat="0 0.707107 0.707107 0">
+                                                                                                    <site name="mother_grip"
+                                                                                                          pos="0 0.02 0"
+                                                                                                          size="0.005 0.005 0.005"
+                                                                                                          rgba="1 0 0 1"
+                                                                                                          type="box"
+                                                                                                          group="1"/>
+                                                                                                    <inertial
+                                                                                                            pos="-6.05724e-10 0.0488878 -1.49571e-09"
+                                                                                                            quat="0.707107 0.707107 0 0"
+                                                                                                            mass="0.0168856"
+                                                                                                            diaginertia="1.16162e-05 1.16161e-05 5.57191e-07"/>
+                                                                                                    <joint name="cable2_J0_20"
+                                                                                                           pos="0 0 0"
+                                                                                                           axis="1 0 0"
+                                                                                                           group="3"
+                                                                                                           damping="0.05"/>
+                                                                                                    <joint name="cable2_J1_20"
+                                                                                                           pos="0 0 0"
+                                                                                                           axis="0 0 -1"
+                                                                                                           group="3"
+                                                                                                           damping="0.05"/>
+                                                                                                    <geom name="mother_contact"
+                                                                                                          pos="0 0.02 0"
+                                                                                                          size="0.01 0.02"
+                                                                                                          quat="0 0 0.7071068 0.7071068"
+                                                                                                          type="capsule"
+                                                                                                          group="0"
+                                                                                                          rgba="0.8 0.2 0.1 1"
+                                                                                                          condim="6"
+                                                                                                          friction="100000000 100000000 100000000"
+                                                                                                          priority="10"
+                                                                                                          solimp="0.99 0.99 0.0001 0.5 2"
+                                                                                                          solref="0.001 1"/>
+                                                                                                    <geom type="mesh"
+                                                                                                          group="0"
+                                                                                                          rgba="0.792157 0.819608 0.933333 1"
+                                                                                                          mesh="mother_start"/>
+                                                                                                    <geom pos="0 0.06 0"
+                                                                                                          quat="0.771453 0 0.636286 0"
+                                                                                                          type="mesh"
+                                                                                                          group="0"
+                                                                                                          rgba="0.79216 0.81961 0.93333 1"
+                                                                                                          mesh="mother_segment1"/>
+                                                                                                    <geom pos="0 0.06 0"
+                                                                                                          quat="-0.469233 0 -0.883074 0"
+                                                                                                          type="mesh"
+                                                                                                          group="0"
+                                                                                                          rgba="0.792157 0.819608 0.933333 1"
+                                                                                                          mesh="mother_segment2"/>
+                                                                                                    <geom pos="0 0.06 0"
+                                                                                                          quat="-0.0955772 0 -0.995422 0"
+                                                                                                          type="mesh"
+                                                                                                          group="0"
+                                                                                                          rgba="0.79216 0.81961 0.93333 1"
+                                                                                                          mesh="mother_segment3"/>
+                                                                                                    <geom pos="0 0.06 0"
+                                                                                                          quat="0.29263 0 -0.956226 0"
+                                                                                                          type="mesh"
+                                                                                                          group="0"
+                                                                                                          rgba="0.79216 0.81961 0.93333 1"
+                                                                                                          mesh="mother_segment4"/>
+                                                                                                    <geom pos="0 0.06 0"
+                                                                                                          quat="0.636286 0 -0.771453 0"
+                                                                                                          type="mesh"
+                                                                                                          group="0"
+                                                                                                          rgba="0.79216 0.81961 0.93333 1"
+                                                                                                          mesh="mother_segment5"/>
+                                                                                                    <geom pos="0 0.06 0"
+                                                                                                          quat="0.883074 0 -0.469233 0"
+                                                                                                          type="mesh"
+                                                                                                          group="0"
+                                                                                                          rgba="0.79216 0.81961 0.93333 1"
+                                                                                                          mesh="mother_segment6"/>
+                                                                                                    <geom pos="0 0.06 0"
+                                                                                                          quat="0.995422 0 -0.0955772 0"
+                                                                                                          type="mesh"
+                                                                                                          group="0"
+                                                                                                          rgba="0.79216 0.81961 0.93333 1"
+                                                                                                          mesh="mother_segment7"/>
+                                                                                                    <geom pos="0 0.06 0"
+                                                                                                          quat="0.956226 0 0.29263 0"
+                                                                                                          type="mesh"
+                                                                                                          group="0"
+                                                                                                          rgba="0.79216 0.81961 0.93333 1"
+                                                                                                          mesh="mother_segment8"/>
+                                                                                                </body>
                                                                                             </body>
                                                                                         </body>
                                                                                     </body>

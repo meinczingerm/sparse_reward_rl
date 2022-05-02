@@ -40,11 +40,17 @@ class DemonstrationPolicy:
             target_pos = self.saved_target_left + np.array([0, 0.1, 0.1])
             left_action = np.hstack([target_pos, np.array([0, 0, 0, 1])])
         elif self.i < 700:
-            target_pos = observation['mother_grip_pos'] + np.array([0, 0.15, 0])
+            target_pos = observation['mother_grip_pos'] + np.array([-0.001, 0.15, 0])
             left_action = np.hstack([target_pos, np.array([0, 0, 0, 1])])
+        elif self.i < 800:
+            target_pos = observation['mother_grip_pos'] + np.array([-0.001, 0.112, 0])
+            left_action = np.hstack([target_pos, np.array([0, 0, 0, 1])])
+        elif self.i < 810:
+            target_pos = observation['mother_grip_pos'] + np.array([-0.001, 0.112, 0])
+            left_action = np.hstack([target_pos, np.array([0, 0, 0, -1])])
         else:
-            target_pos = observation['mother_grip_pos'] + np.array([0, 0.1, 0])
-            left_action = np.hstack([target_pos, np.array([0, 0, 0, 1])])
+            target_pos = observation['mother_grip_pos'] + np.array([-0.001, 0.112, -0.1])
+            left_action = np.hstack([target_pos, np.array([np.pi/2, 0, 0, -1])])
 
         return left_action
 
@@ -58,9 +64,18 @@ class DemonstrationPolicy:
             right_action = np.hstack([target_pos, np.array([-np.pi/2, 0, 0, -1])])
         elif self.i < 500:
             right_action = np.hstack([self.saved_target_right, np.array([-np.pi / 2, 0, 0, 1])])
-        else:
+        elif self.i<800:
             target_pos = self.saved_target_right + np.array([0, 0.1, 0.2])
             right_action = np.hstack([target_pos, np.array([0, 0, 0, 1])])
+        elif self.i<810:
+            target_pos = self.saved_target_right + np.array([0, 0.1, 0.2])
+            right_action = np.hstack([target_pos, np.array([0, 0, 0, -1])])
+        elif self.i < 820:
+            target_pos = self.saved_target_right + np.array([0, 0.1, 0.1])
+            right_action = np.hstack([target_pos, np.array([-np.pi/2, 0, 0, -1])])
+        else:
+            target_pos = self.saved_target_right + np.array([0, 0.1, -0.1])
+            right_action = np.hstack([target_pos, np.array([-np.pi/2, 0, 0, -1])])
         return right_action
 
 

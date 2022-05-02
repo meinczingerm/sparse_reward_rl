@@ -25,7 +25,7 @@
     </asset>
     <worldbody>
     <body>
-          <body name="object" pos="0.5 -0.8 0.3" quat="0 0 0 1">
+          <body name="object" pos="0.6 -0.8 0.65" quat="0 0 0 1">
         <geom type="mesh" group="0" rgba="0.792157 0.819608 0.933333 1" mesh="base_link" />
         <geom pos="0.323483 -1.28784 0.516817" quat="0.5 0.5 0.5 0.5" type="mesh" group="0" rgba="0.792157 0.819608 0.933333 1" mesh="base1" />
         <geom pos="0.843483 -0.307835 0.516817" quat="0.707109 0.707104 -1.29867e-06 1.29868e-06" type="mesh" group="0" rgba="0.792157 0.819608 0.933333 1" mesh="base2" />
@@ -85,10 +85,11 @@
                                                 <joint name="cable1_J1_9" pos="-0.02 0 0" axis="0 0 1" group="3" damping="0.05" />
                                                 <geom name="cable1_G9" size="0.005 0.02" quat="0.707107 0 0.707107 0" type="capsule" group="0" rgba="0.8 0.2 0.1 1" />
                                                 <body name="father1" pos="0.02 0 -0.008" quat="0 0.707107 0.707107 0" >
-                                                    <site name="father_grip" pos="0 0.04 -0.008" size="0.005 0.005 0.005" rgba="1 0 0 1" type="box" group="1"/>
+                                                    <site name="father_grip" pos="0 0.02 -0.008" size="0.01 0.01 0.01" rgba="1 0 0 1" type="box" group="1"/>
                                                     <inertial pos="0 0.036439 -0.008" quat="0.707107 0.707107 0 0" mass="0.0118723" diaginertia="4.75264e-06 4.75254e-06 3.37026e-07" />
                                                     <joint name="cable1_J0_10" pos="0 0 0" axis="0 1 0" group="3" damping="0.05" />
                                                     <joint name="cable1_J1_10" pos="0 0 0" axis="0 0 1" group="3" damping="0.05" />
+                                                    <geom name="father_contact" pos="0 0.02 -0.008" size="0.01 0.02" quat="0 0 0.7071068 0.7071068" type="capsule" group="0" rgba="0.8 0.2 0.1 1" condim="6" friction="100000000 100000000 100000000" priority="10" solimp="0.99 0.99 0.0001 0.5 2" solref="0.001 1"/>
                                                     <geom type="mesh" group="0" rgba="0.1 0.1 0.1 1" mesh="father1" />
                                                     <geom pos="0 0.06 -0.008" quat="0.720273 0 0.69369 0" type="mesh" group="0" rgba="0.75294 0.75294 0.75294 1" mesh="father2" />
                                                 </body>
@@ -151,11 +152,12 @@
                                                 <joint name="cable2_J1_9" pos="-0.02 0 0" axis="0 0 1" group="3" damping="0.05" />
                                                 <geom name="cable2_G9" size="0.005 0.02" quat="0.707107 0 0.707107 0" type="capsule" group="0" rgba="0.8 0.2 0.1 1" />
                                                 <body name="mother_start" pos="0.02 0 0" quat="0 0.707107 0.707107 0">
-                                                    <site name="mother_grip" pos="0 0.04 0" size="0.005 0.005 0.005" rgba="1 0 0 1" type="box" group="1"/>
+                                                    <site name="mother_grip" pos="0 0.02 0" size="0.01 0.01 0.01" rgba="1 0 0 1" type="box" group="1"/>
                                                     <inertial pos="-6.05724e-10 0.0488878 -1.49571e-09" quat="0.707107 0.707107 0 0" mass="0.0168856" diaginertia="1.16162e-05 1.16161e-05 5.57191e-07"/>
                                                     <joint name="cable2_J0_10" pos="0 0 0" axis="0 1 0" group="3" damping="0.05" />
                                                     <joint name="cable2_J1_10" pos="0 0 0" axis="0 0 1" group="3" damping="0.05" />
-                                                    <geom type="mesh" group="0" rgba="0.792157 0.819608 0.933333 1" mesh="mother_start"/>
+                                                    <geom name="mother_contact" pos="0 0.02 0" size="0.01 0.02" quat="0 0 0.7071068 0.7071068" type="capsule" group="0" rgba="0.8 0.2 0.1 1" condim="6" friction="100000000 100000000 100000000" priority="10" solimp="0.99 0.99 0.0001 0.5 2" solref="0.001 1"/>
+                                                    <geom type="mesh" group="0" rgba="0.792157 0.819608 0.933333 1"  mesh="mother_start"/>
                                                     <geom pos="0 0.06 0" quat="0.771453 0 0.636286 0" type="mesh" group="0" rgba="0.79216 0.81961 0.93333 1" mesh="mother_segment1"/>
                                                     <geom pos="0 0.06 0" quat="-0.469233 0 -0.883074 0" type="mesh" group="0" rgba="0.792157 0.819608 0.933333 1" mesh="mother_segment2"/>
                                                     <geom pos="0 0.06 0" quat="-0.0955772 0 -0.995422 0" type="mesh" group="0" rgba="0.79216 0.81961 0.93333 1" mesh="mother_segment3"/>

@@ -35,9 +35,9 @@ class CableInsertionEnv(TwoArmEnv):
         Note that "default" corresponds to either "bimanual" if a bimanual robot is used or "single-arm-opposed" if two
         single-arm robots are used.
 
-        controller_configs (str or list of dict): If set, contains relevant controller parameters for creating a
-            custom controller. Else, uses the default controller for this specific task. Should either be single
-            dict if same controller is to be used for all robots or else it should be a list of the same length as
+        controller_configs (str or list of dict): If set, contains relevant demonstration parameters for creating a
+            custom demonstration. Else, uses the default demonstration for this specific task. Should either be single
+            dict if same demonstration is to be used for all robots or else it should be a list of the same length as
             "robots" param
 
         gripper_types (str or list of str): type of gripper, used to instantiate
@@ -181,7 +181,7 @@ class CableInsertionEnv(TwoArmEnv):
         # settings for table top
         self.table_full_size = table_full_size
         self.table_friction = table_friction
-        self.table_offset = np.array((0, 0, 0.8))
+        self.table_offset = np.array((0, 0, 0.9))
 
         # reward configuration
         self.reward_scale = reward_scale
@@ -314,6 +314,43 @@ class CableInsertionEnv(TwoArmEnv):
         """
         observables = super()._setup_observables()
 
+        # Get prefix from robot model to avoid naming clashes for multiple robots and define observables modality
+        modality = f"object"
+        mother_grip_id = self.sim.model.site_name2id(self._important_sites["mother_grip"])
+
+        # cable grips
+        @sensor(modality=modality)
+        def mother_grip_pos(obs_cache):
+            mother_grip_id = self.sim.model.site_name2id(self._important_sites["mother_grip"])
+            return np.array(self.sim.data.site_xpos[mother_grip_id])
+
+        @sensor(modality=modality)
+        def mother_grip_ori(obs_cache):
+            mother_grip_id = self.sim.model.site_name2id(self._important_sites["mother_grip"])
+            return np.array(self.sim.data.site_xmat[mother_grip_id])
+
+        @sensor(modality=modality)
+        def father_grip_pos(obs_cache):
+            father_grip_id = self.sim.model.site_name2id(self._important_sites["father_grip"])
+            return np.array(self.sim.data.site_xpos[father_grip_id])
+
+        @sensor(modality=modality)
+        def father_grip_ori(obs_cache):
+            father_grip_id = self.sim.model.site_name2id(self._important_sites["father_grip"])
+            return np.array(self.sim.data.site_xmat[father_grip_id])
+
+
+        sensors = [mother_grip_pos, mother_grip_ori, father_grip_pos, father_grip_ori]
+        names = [f"mother_grip_pos", "mother_grip_ori", "father_grip_pos", "father_grip_ori"]
+
+        # Create observables for this robot
+        for name, s in zip(names, sensors):
+            observables[name] = Observable(
+                name=name,
+                sensor=s,
+                sampling_rate=self.control_freq,
+            )
+
         return observables
 
     def _reset_internal(self):
@@ -340,3 +377,25 @@ class CableInsertionEnv(TwoArmEnv):
         """
         #TODO
         return False
+
+    @property
+    def _important_sites(self):
+        """
+        Sites used to aid visualization by human. (usually "grip_site" and "grip_cylinder")
+        (and should be hidden from robots)
+
+        Returns:
+            dict:
+
+                :`'grip_site'`: Name of grip actuation intersection location site
+                :`'grip_cylinder'`: Name of grip actuation z-axis location site
+                :`'ee'`: Name of end effector site
+                :`'ee_x'`: Name of end effector site (x-axis)
+                :`'ee_y'`: Name of end effector site (y-axis)
+                :`'ee_z'`: Name of end effector site (z-axis)
+        """
+        return {
+            "father_grip": "cable_stand_father_grip",
+            "mother_grip": "cable_stand_mother_grip"
+        }
+

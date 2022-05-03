@@ -2,7 +2,7 @@ import numpy as np
 import robosuite
 from robosuite import load_controller_config
 
-from env.cable_insertion_task import CableInsertionEnv
+from env.cable_insertion_env import CableInsertionEnv
 
 if __name__ == '__main__':
     controller_config = load_controller_config(default_controller="OSC_POSE")

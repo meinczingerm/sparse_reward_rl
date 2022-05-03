@@ -28,28 +28,31 @@ class DemonstrationPolicy:
             left_action = np.hstack([-0.3, 0.6, 1.3, np.array([np.pi / 2, 0, 0, -1])])
         elif self.i<300:
             target_pos = observation['father_grip_pos'] + np.array([0, 0.1, 0])
-            left_action = np.hstack([target_pos, np.array([np.pi/2, 0, 0, -1])])
+            left_action = np.hstack([target_pos, np.array([3/4*np.pi, 0, 0, -1])])
         elif self.i<400:
             target_pos = observation['father_grip_pos']
             self.saved_target_left = target_pos
-            left_action = np.hstack([target_pos, np.array([np.pi/2, 0, 0, -1])])
+            left_action = np.hstack([target_pos, np.array([3/4*np.pi, 0, 0, -1])])
         elif self.i < 500:
             target_pos = self.saved_target_left
-            left_action = np.hstack([self.saved_target_left, np.array([np.pi / 2, 0, 0, 1])])
+            left_action = np.hstack([self.saved_target_left, np.array([np.pi *3/4, 0, 0, 1])])
         elif self.i < 600:
-            target_pos = self.saved_target_left + np.array([0, 0.1, 0.1])
-            left_action = np.hstack([target_pos, np.array([0, 0, 0, 1])])
+            target_pos = self.saved_target_left + np.array([0.1, 0, 0.1])
+            left_action = np.hstack([target_pos, np.array([np.pi *3/4, 0, 0, 1])])
+        elif self.i < 650:
+            target_pos = self.saved_target_left + np.array([0.1, 0, 0.1])
+            left_action = np.hstack([target_pos, np.array([np.pi/4, 0, 0, 1])])
         elif self.i < 700:
-            target_pos = observation['mother_grip_pos'] + np.array([-0.001, 0.15, 0])
-            left_action = np.hstack([target_pos, np.array([0, 0, 0, 1])])
+            target_pos = observation['mother_grip_pos'] + np.array([0, 0.15, 0])
+            left_action = np.hstack([target_pos, np.array([np.pi/4, 0, 0, 1])])
         elif self.i < 800:
-            target_pos = observation['mother_grip_pos'] + np.array([-0.001, 0.112, 0])
-            left_action = np.hstack([target_pos, np.array([0, 0, 0, 1])])
+            target_pos = observation['mother_grip_pos'] + np.array([0, 0.11, 0])
+            left_action = np.hstack([target_pos, np.array([np.pi/4, 0, 0, 1])])
         elif self.i < 810:
-            target_pos = observation['mother_grip_pos'] + np.array([-0.001, 0.112, 0])
-            left_action = np.hstack([target_pos, np.array([0, 0, 0, -1])])
+            target_pos = observation['mother_grip_pos'] + np.array([0, 0.11, 0])
+            left_action = np.hstack([target_pos, np.array([np.pi/4, 0, 0, -1])])
         else:
-            target_pos = observation['mother_grip_pos'] + np.array([-0.001, 0.112, -0.1])
+            target_pos = observation['mother_grip_pos'] + np.array([0, 0.116, -0.1])
             left_action = np.hstack([target_pos, np.array([np.pi/2, 0, 0, -1])])
 
         return left_action
@@ -57,19 +60,19 @@ class DemonstrationPolicy:
     def right_arm_step(self, observation):
         if self.i<300:
             target_pos = observation['mother_grip_pos'] + np.array([0, -0.1, 0])
-            right_action = np.hstack([target_pos, np.array([-np.pi/2, 0, 0, -1])])
+            right_action = np.hstack([target_pos, np.array([-3/4*np.pi, 0, 0, -1])])
         elif self.i<400:
             target_pos = observation['mother_grip_pos']
             self.saved_target_right = target_pos
-            right_action = np.hstack([target_pos, np.array([-np.pi/2, 0, 0, -1])])
+            right_action = np.hstack([target_pos, np.array([-3/4*np.pi, 0, 0, -1])])
         elif self.i < 500:
-            right_action = np.hstack([self.saved_target_right, np.array([-np.pi / 2, 0, 0, 1])])
+            right_action = np.hstack([self.saved_target_right, np.array([-3/4*np.pi, 0, 0, 1])])
         elif self.i<800:
             target_pos = self.saved_target_right + np.array([0, 0.1, 0.2])
-            right_action = np.hstack([target_pos, np.array([0, 0, 0, 1])])
+            right_action = np.hstack([target_pos, np.array([-np.pi/4, 0, 0, 1])])
         elif self.i<810:
             target_pos = self.saved_target_right + np.array([0, 0.1, 0.2])
-            right_action = np.hstack([target_pos, np.array([0, 0, 0, -1])])
+            right_action = np.hstack([target_pos, np.array([-np.pi/4, 0, 0, -1])])
         elif self.i < 820:
             target_pos = self.saved_target_right + np.array([0, 0.1, 0.1])
             right_action = np.hstack([target_pos, np.array([-np.pi/2, 0, 0, -1])])
@@ -90,7 +93,7 @@ class DemonstrationPolicy:
 if __name__ == '__main__':
     controller_config = load_controller_config(default_controller="OSC_POSE")
     controller_config['control_delta'] = False
-    controller_config['kp'] = 100
+    controller_config['kp'] = 300
 
     env = CableInsertionEnv(robots=["Panda", "Panda"],  # load a Sawyer robot and a Panda robot
                             gripper_types="default",  # use default grippers per robot arm

@@ -1,4 +1,4 @@
-<mujoco model="base">
+﻿<mujoco model="base">
     <compiler angle="radian" meshdir="/home/mark/tum/2022ss/thesis/robosuite_parts_collection/meshes/"/>
     <size njmax="500" nconmax="100"/>
     <asset>
@@ -288,7 +288,7 @@
                                                                                                       quat="0 0.707107 0.707107 0">
                                                                                                     <site name="father_grip"
                                                                                                           pos="0 0.02 -0.008"
-                                                                                                          size="0.005 0.005 0.005"
+                                                                                                          size="0.01 0.01 0.01"
                                                                                                           rgba="1 0 0 1"
                                                                                                           type="box"
                                                                                                           group="1"/>
@@ -322,12 +322,18 @@
                                                                                                     <geom type="mesh"
                                                                                                           group="0"
                                                                                                           rgba="0.1 0.1 0.1 1"
+                                                                                                          priority="10"
+                                                                                                          solimp="0.99 0.99 0.0001 0.5 2"
+                                                                                                          solref="0.001 1"
                                                                                                           mesh="father1"/>
                                                                                                     <geom pos="0 0.06 -0.008"
                                                                                                           quat="0.720273 0 0.69369 0"
                                                                                                           type="mesh"
                                                                                                           group="0"
                                                                                                           rgba="0.75294 0.75294 0.75294 1"
+                                                                                                          priority="10"
+                                                                                                          solimp="0.8 0.8 0.0001 0.5 2"
+                                                                                                          solref="0.001 1"
                                                                                                           mesh="father2"/>
                                                                                                 </body>
                                                                                             </body>
@@ -600,7 +606,7 @@
                                                                                                       quat="0 0.707107 0.707107 0">
                                                                                                     <site name="mother_grip"
                                                                                                           pos="0 0.02 0"
-                                                                                                          size="0.005 0.005 0.005"
+                                                                                                          size="0.01 0.01 0.01"
                                                                                                           rgba="1 0 0 1"
                                                                                                           type="box"
                                                                                                           group="1"/>

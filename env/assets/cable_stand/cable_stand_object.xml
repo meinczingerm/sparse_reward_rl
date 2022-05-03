@@ -288,7 +288,7 @@
                                                                                                       quat="0 0.707107 0.707107 0">
                                                                                                     <site name="father_grip"
                                                                                                           pos="0 0.02 -0.008"
-                                                                                                          size="0.01 0.01 0.01"
+                                                                                                          size="0.005 0.005 0.005"
                                                                                                           rgba="1 0 0 1"
                                                                                                           type="box"
                                                                                                           group="1"/>
@@ -606,7 +606,7 @@
                                                                                                       quat="0 0.707107 0.707107 0">
                                                                                                     <site name="mother_grip"
                                                                                                           pos="0 0.02 0"
-                                                                                                          size="0.01 0.01 0.01"
+                                                                                                          size="0.005 0.005 0.005"
                                                                                                           rgba="1 0 0 1"
                                                                                                           type="box"
                                                                                                           group="1"/>

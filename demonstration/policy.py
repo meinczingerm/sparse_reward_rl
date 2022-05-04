@@ -1,13 +1,8 @@
-import math
-from typing import Union
-
 import numpy as np
-import robosuite
 from robosuite import load_controller_config
-from robosuite.controllers import OperationalSpaceController
-from robosuite.utils.transform_utils import mat2euler, matrix_inverse, quat2mat, quat_distance, quat2axisangle
 
 from env.cable_insertion_env import CableInsertionEnv
+
 
 class DemonstrationPolicy:
     def __init__(self):
@@ -96,7 +91,7 @@ if __name__ == '__main__':
                             has_renderer=True,  # no on-screen rendering
                             has_offscreen_renderer=False,  # no off-screen rendering
                             control_freq=20,  # 20 hz control for applied actions
-                            horizon=10000,  # each episode terminates after 200 steps
+                            horizon=1000,  # each episode terminates after 200 steps
                             use_object_obs=True,  # provide object observations to agent
                             use_camera_obs=False,  # don't provide image observations to agent
                             reward_shaping=True)  # use a dense reward signal for learning)
@@ -104,9 +99,13 @@ if __name__ == '__main__':
     demonstration_policy = DemonstrationPolicy()
 
     action = np.random.uniform(low=env.action_spec[0], high=env.action_spec[1])
-    obs, _, _, _ = env.step(action)
+    obs, _, done, _ = env.step(action)
 
     while True:
         action = demonstration_policy.step(obs)
-        obs, _, _, _ = env.step(action)
+        obs, _, done, _ = env.step(action)
         env.render()
+        if done:
+            print(done)
+            env.reset()
+            demonstration_policy = DemonstrationPolicy()

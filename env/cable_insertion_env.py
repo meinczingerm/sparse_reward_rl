@@ -2,14 +2,12 @@ import os.path
 from collections import OrderedDict
 
 import numpy as np
-
 import robosuite.utils.transform_utils as T
 from robosuite.environments.manipulation.two_arm_env import TwoArmEnv
 from robosuite.models.arenas import TableArena
-from robosuite.models.objects import PotWithHandlesObject, MujocoXMLObject
+from robosuite.models.objects import MujocoXMLObject
 from robosuite.models.tasks import ManipulationTask
 from robosuite.utils.observables import Observable, sensor
-from robosuite.utils.placement_samplers import UniformRandomSampler
 
 from utils import get_project_root_path
 
@@ -222,7 +220,7 @@ class CableInsertionEnv(TwoArmEnv):
 
     def reward(self, action=None):
         """
-        Reward function for the task.
+        Sparse reward function for the task.
 
         Args:
             action (np array): [NOT USED]
@@ -239,7 +237,7 @@ class CableInsertionEnv(TwoArmEnv):
 
     def _load_model(self):
         """
-        Loads an xml model, puts it in self.model
+        Loading the arena with table, the double-arm robots and the cable stand.
         """
         super()._load_model()
 
@@ -295,7 +293,8 @@ class CableInsertionEnv(TwoArmEnv):
 
     def _setup_observables(self):
         """
-        Sets up observables to be used for this environment. Creates object-based observables if enabled
+        Sets up observables to be used for this environment, namely the position and orientation for the
+        gripping sites for both cable.
 
         Returns:
             OrderedDict: Dictionary mapping observable names to its corresponding Observable object
@@ -304,7 +303,6 @@ class CableInsertionEnv(TwoArmEnv):
 
         # Get prefix from robot model to avoid naming clashes for multiple robots and define observables modality
         modality = f"object"
-        mother_grip_id = self.sim.model.site_name2id(self._important_sites["mother_grip"])
 
         # cable grips
         @sensor(modality=modality)
@@ -340,24 +338,6 @@ class CableInsertionEnv(TwoArmEnv):
             )
 
         return observables
-
-    def _reset_internal(self):
-        """
-        Resets simulation internal configurations.
-        """
-        super()._reset_internal()
-
-    def visualize(self, vis_settings):
-        """
-        In addition to super call, visualize gripper site proportional to the distance to each handle.
-
-        Args:
-            vis_settings (dict): Visualization keywords mapped to T/F, determining whether that specific
-                component should be visualized. Should have "grippers" keyword as well as any other relevant
-                options specified.
-        """
-        # Run superclass method first
-        super().visualize(vis_settings=vis_settings)
 
     def _check_success(self):
         """

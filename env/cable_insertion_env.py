@@ -2,14 +2,12 @@ import os.path
 from collections import OrderedDict
 
 import numpy as np
-
 import robosuite.utils.transform_utils as T
 from robosuite.environments.manipulation.two_arm_env import TwoArmEnv
 from robosuite.models.arenas import TableArena
-from robosuite.models.objects import PotWithHandlesObject, MujocoXMLObject
+from robosuite.models.objects import MujocoXMLObject
 from robosuite.models.tasks import ManipulationTask
 from robosuite.utils.observables import Observable, sensor
-from robosuite.utils.placement_samplers import UniformRandomSampler
 
 from utils import get_project_root_path
 
@@ -222,22 +220,7 @@ class CableInsertionEnv(TwoArmEnv):
 
     def reward(self, action=None):
         """
-        Reward function for the task.
-
-        Sparse un-normalized reward:
-
-            - a discrete reward of 3.0 is provided if the pot is lifted and is parallel within 30 deg to the table
-
-        Un-normalized summed components if using reward shaping:
-
-            - Reaching: in [0, 0.5], per-arm component that is proportional to the distance between each arm and its
-              respective pot handle, and exactly 0.5 when grasping the handle
-              - Note that the agent only gets the lifting reward when flipping no more than 30 degrees.
-            - Grasping: in {0, 0.25}, binary per-arm component awarded if the gripper is grasping its correct handle
-            - Lifting: in [0, 1.5], proportional to the pot's height above the table, and capped at a certain threshold
-
-        Note that the final reward is normalized and scaled by reward_scale / 3.0 as
-        well so that the max score is equal to reward_scale
+        Sparse reward function for the task.
 
         Args:
             action (np array): [NOT USED]
@@ -245,13 +228,16 @@ class CableInsertionEnv(TwoArmEnv):
         Returns:
             float: reward value
         """
-        reward = 0
+        if self._check_success():
+            reward = 5000
+        else:
+            reward = -1
 
         return reward
 
     def _load_model(self):
         """
-        Loads an xml model, puts it in self.model
+        Loading the arena with table, the double-arm robots and the cable stand.
         """
         super()._load_model()
 
@@ -307,7 +293,8 @@ class CableInsertionEnv(TwoArmEnv):
 
     def _setup_observables(self):
         """
-        Sets up observables to be used for this environment. Creates object-based observables if enabled
+        Sets up observables to be used for this environment, namely the position and orientation for the
+        gripping sites for both cable.
 
         Returns:
             OrderedDict: Dictionary mapping observable names to its corresponding Observable object
@@ -316,7 +303,6 @@ class CableInsertionEnv(TwoArmEnv):
 
         # Get prefix from robot model to avoid naming clashes for multiple robots and define observables modality
         modality = f"object"
-        mother_grip_id = self.sim.model.site_name2id(self._important_sites["mother_grip"])
 
         # cable grips
         @sensor(modality=modality)
@@ -353,30 +339,45 @@ class CableInsertionEnv(TwoArmEnv):
 
         return observables
 
-    def _reset_internal(self):
-        """
-        Resets simulation internal configurations.
-        """
-        super()._reset_internal()
-
-    def visualize(self, vis_settings):
-        """
-        In addition to super call, visualize gripper site proportional to the distance to each handle.
-
-        Args:
-            vis_settings (dict): Visualization keywords mapped to T/F, determining whether that specific
-                component should be visualized. Should have "grippers" keyword as well as any other relevant
-                options specified.
-        """
-        # Run superclass method first
-        super().visualize(vis_settings=vis_settings)
-
     def _check_success(self):
         """
         Check if cable is succesfully inserted.
         """
-        #TODO
-        return False
+        father_tip_id = self.sim.model.site_name2id(self._important_sites["father_tip"])
+        father_tip_pos = np.array(self.sim.data.site_xpos[father_tip_id])
+        father_tip_ori = self.sim.data.site_xmat[father_tip_id].reshape([3, 3])
+        father_tip_z_ori = np.matmul(father_tip_ori, np.array([[0], [1], [0]])) # Z and Y axis is changed in the xml site
+
+        mother_tip_id = self.sim.model.site_name2id(self._important_sites["mother_inner_tip"])
+        mother_tip_pos = np.array(self.sim.data.site_xpos[mother_tip_id])
+        mother_tip_ori = self.sim.data.site_xmat[mother_tip_id].reshape([3, 3])
+        mother_tip_z_ori = np.matmul(mother_tip_ori, np.array([[0], [1], [0]])) # Z and Y axis is changed in the xml site
+
+
+        pos_error = np.linalg.norm(father_tip_pos-mother_tip_pos, 2)
+        ori_error = np.linalg.norm(mother_tip_z_ori + father_tip_z_ori) # the two z direction has to be oppsite
+        if pos_error < 0.003 and ori_error < 0.005:
+            return True
+        else:
+            return False
+
+    def _post_action(self, action):
+        """
+        Do any housekeeping after taking an action.
+        Args:
+            action (np.array): Action to execute within the environment
+        Returns:
+            3-tuple:
+                - (float) reward from the environment
+                - (bool) whether the current episode is completed or not
+                - (dict) empty dict to be filled with information by subclassed method
+        """
+        reward = self.reward(action)
+
+        # done if number of elapsed timesteps is greater than horizon
+        self.done = (self.timestep >= self.horizon) or reward == 5000
+
+        return reward, self.done, {}
 
     @property
     def _important_sites(self):
@@ -396,6 +397,8 @@ class CableInsertionEnv(TwoArmEnv):
         """
         return {
             "father_grip": "cable_stand_father_grip",
-            "mother_grip": "cable_stand_mother_grip"
+            "father_tip": "cable_stand_father_tip",
+            "mother_grip": "cable_stand_mother_grip",
+            "mother_inner_tip": "cable_stand_mother_inner_tip"
         }
 

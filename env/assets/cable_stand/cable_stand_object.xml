@@ -292,6 +292,12 @@
                                                                                                           rgba="1 0 0 1"
                                                                                                           type="box"
                                                                                                           group="1"/>
+                                                                                                    <site name="father_tip"
+                                                                                                          pos="0 0.094 -0.008"
+                                                                                                          size="0.001 0.001 0.001"
+                                                                                                          rgba="1 0 0 1"
+                                                                                                          type="box"
+                                                                                                          group="1"/>
                                                                                                     <inertial
                                                                                                             pos="0 0.036439 -0.008"
                                                                                                             quat="0.707107 0.707107 0 0"
@@ -332,7 +338,7 @@
                                                                                                           group="0"
                                                                                                           rgba="0.75294 0.75294 0.75294 1"
                                                                                                           priority="10"
-                                                                                                          solimp="0.8 0.8 0.0001 0.5 2"
+                                                                                                          solimp="0.9 0.9 0.0001 0.5 2"
                                                                                                           solref="0.001 1"
                                                                                                           mesh="father2"/>
                                                                                                 </body>
@@ -606,6 +612,12 @@
                                                                                                       quat="0 0.707107 0.707107 0">
                                                                                                     <site name="mother_grip"
                                                                                                           pos="0 0.02 0"
+                                                                                                          size="0.005 0.005 0.005"
+                                                                                                          rgba="1 0 0 1"
+                                                                                                          type="box"
+                                                                                                          group="1"/>
+                                                                                                    <site name="mother_inner_tip"
+                                                                                                          pos="0 0.065 0"
                                                                                                           size="0.005 0.005 0.005"
                                                                                                           rgba="1 0 0 1"
                                                                                                           type="box"

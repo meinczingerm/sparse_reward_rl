@@ -8,3 +8,4 @@ MUJOCO_LOG.TXT
 __pycache__/
 
 logs/
+her_comparison_logs/

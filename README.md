@@ -5,7 +5,7 @@
 <h2>Features</h2>
 <h3>Bimanual cable insertion environment</h3>The environment copies the task of bimanual
 cable insertion presented in the paper:
-![alt text](readme_imgs/bimanual_cable_env.png)
+<img src=readme_imgs/bimanual_cable_env.png> 
 
 This environment can be tested with random actions by running
 env/run.py.

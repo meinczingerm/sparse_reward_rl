@@ -23,6 +23,7 @@ was tested with version 1.3.2 older versions can cause incompatibility issues, i
 install older versions checkout 2nd point in Known issues.)
 
 <h3>Known issues</h3>
+
 1. In some cases the mujoco renderer is not working on default and returns the error:
 "ERROR: GLEW initalization error: Missing GL version".In this case the following environment 
 variables has to be set properly:

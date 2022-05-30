@@ -1,10 +1,12 @@
 import os
 
 import gym
+from sb3_contrib import TQC
+from sb3_contrib.common.wrappers import TimeFeatureWrapper
+
 from stable_baselines3 import *
 from stable_baselines3.common.env_util import make_vec_env
 from stable_baselines3.common.vec_env import SubprocVecEnv
-
 
 def save_result_gif(env, model, path, filename, frames_to_save=100):
     """
@@ -106,7 +108,8 @@ def save_dict(data_dict, path):
 
 def setup_training(config):
     print("creating env")
-    env = make_vec_env(config['env']['name'], n_envs=config['env']['env_num'])
+    env = make_vec_env(config['env']['name'], n_envs=config['env']['env_num'], wrapper_class=config['env']['env_wrapper'],
+                       wrapper_kwargs=config['env']['env_wrapper_kwargs'])
 
     log_dir = create_log_dir(config['env']['name'])
     config['model']['kwargs']['tensorboard_log'] = log_dir

@@ -6,10 +6,7 @@ from env.cable_insertion_env import CableInsertionEnv
 
 class DemonstrationPolicy:
     def __init__(self):
-        self.mother_grabbed = False
-        self.father_grabbed = False
         self.i = 0
-        self.reached = False
 
     def step(self, observation):
         action = []
@@ -69,13 +66,8 @@ class DemonstrationPolicy:
             right_action = np.hstack([target_pos, np.array([-np.pi/2, 0, 0, -1])])
         return right_action
 
-
-    def grab_mother(self, observation):
-        raise NotImplementedError
-
-
-    def distance_to_mother(self):
-        raise NotImplementedError
+    def reset(self):
+        self.i = 0
 
 
 if __name__ == '__main__':

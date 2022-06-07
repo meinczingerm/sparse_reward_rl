@@ -211,5 +211,5 @@ def read_hdf5_file(file_path):
         print("k")
 
 if __name__ == '__main__':
-    # collect_demonstrations(1)
-    read_hdf5_file("/home/mark/tum/2022ss/thesis/master_thesis/demonstration/collection/1654522800_8797252/demo.hdf5")
+    collect_demonstrations(1)
+    # read_hdf5_file("/home/mark/tum/2022ss/thesis/master_thesis/demonstration/collection/1654522800_8797252/demo.hdf5")

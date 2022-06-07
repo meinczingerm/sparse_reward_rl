@@ -1,8 +1,10 @@
 import os.path
+import warnings
 from collections import OrderedDict
 
 import numpy as np
 import robosuite.utils.transform_utils as T
+from gym.vector.utils import spaces
 from robosuite.environments.manipulation.two_arm_env import TwoArmEnv
 from robosuite.models.arenas import TableArena
 from robosuite.models.objects import MujocoXMLObject
@@ -217,6 +219,26 @@ class CableInsertionEnv(TwoArmEnv):
             renderer=renderer,
             renderer_config=renderer_config,
         )
+
+        warnings.warn("Observation space is not configured")
+        self.action_space = spaces.Box(controller_configs["input_min"], controller_configs["input_max"],
+                                       shape=(14,), dtype="float32")
+        self.observation_space = spaces.Dict(
+            dict(
+                desired_goal=spaces.Box(
+                    -np.inf, np.inf, shape=(5,), dtype="float32"
+                ),
+                achieved_goal=spaces.Box(
+                    -np.inf, np.inf, shape=(5,), dtype="float32"
+                ),
+                observation=spaces.Box(
+                    -np.inf, np.inf, shape=(5,), dtype="float32"
+                ),
+            )
+        )
+
+        self.metadata = None
+        self.spec = None
 
     def reward(self, action=None):
         """

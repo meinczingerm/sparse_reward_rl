@@ -64,8 +64,12 @@ class RobotStages:
             self.stage += 1
 
 
-class DemonstrationPolicy:
+class IKDemonstrationPolicy:
     def __init__(self):
+        self.robot_stages = None
+        self.reset()
+
+    def reset(self):
         robot_0_stages = RobotStages([RobotTarget(self.random_pos_around(np.array([-0.35, -0.5, 1.35])),
                                           self.random_quat_around(np.array([0.5, -0.5, -0.5, -0.5])), -1),
                                       RobotTarget(np.array([0, 0, 0]),
@@ -117,7 +121,6 @@ class DemonstrationPolicy:
         action = []
         action.append(self.right_arm_step(observation))
         action.append(self.left_arm_step(observation))
-        self.i += 1
         return np.hstack(action)
 
     def right_arm_step(self, observation):
@@ -259,7 +262,7 @@ if __name__ == '__main__':
                             use_camera_obs=False,  # don't provide image observations to agent
                             reward_shaping=True)  # use a dense reward signal for learning)
 
-    demonstration_policy = DemonstrationPolicy()
+    demonstration_policy = IKDemonstrationPolicy()
 
 
 
@@ -273,4 +276,4 @@ if __name__ == '__main__':
         if done:
             print(done)
             env.reset()
-            demonstration_policy = DemonstrationPolicy()
+            demonstration_policy = IKDemonstrationPolicy()

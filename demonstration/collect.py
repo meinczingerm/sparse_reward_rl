@@ -18,6 +18,7 @@ from robosuite import load_controller_config
 from robosuite.utils.camera_utils import DemoPlaybackCameraMover
 from robosuite.wrappers import DataCollectionWrapper, VisualizationWrapper
 
+from demonstration.inverse_kinematic_policy import IKDemonstrationPolicy
 from demonstration.observation_collection_wrapper import ObservationCollectionWrapper
 from demonstration.policy import DemonstrationPolicy
 from env.cable_insertion_env import CableInsertionEnv
@@ -153,9 +154,8 @@ def collect_demonstrations(episode_num=10):
     :param episode_num: number of succesful episodes to collect
     :return: None
     """
-    controller_config = load_controller_config(default_controller="OSC_POSE")
-    controller_config['control_delta'] = False
-    controller_config['kp'] = 150
+    controller_config = load_controller_config(default_controller="IK_POSE")
+    controller_config['kp'] = 100
 
     env = CableInsertionEnv(robots=["Panda", "Panda"],  # load a Sawyer robot and a Panda robot
                             gripper_types="default",  # use default grippers per robot arm
@@ -176,7 +176,7 @@ def collect_demonstrations(episode_num=10):
         "controller_configs": controller_config,
     }
     env_config = json.dumps(env_config)
-    demonstration_policy = DemonstrationPolicy()
+    demonstration_policy = IKDemonstrationPolicy()
 
     # Wrap this with visualization wrapper
     env = VisualizationWrapper(env)

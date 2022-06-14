@@ -326,7 +326,7 @@ class CableInsertionEnv(TwoArmEnv):
         observables = super()._setup_observables()
 
         # Get prefix from robot model to avoid naming clashes for multiple robots and define observables modality
-        modality = f"object"
+        modality = f"objective"
 
         # cable grips
         @sensor(modality=modality)
@@ -335,7 +335,7 @@ class CableInsertionEnv(TwoArmEnv):
             return np.array(self.sim.data.site_xpos[mother_grip_id])
 
         @sensor(modality=modality)
-        def mother_grip_ori(obs_cache):
+        def mother_grip_mat(obs_cache):
             mother_grip_id = self.sim.model.site_name2id(self._important_sites["mother_grip"])
             return np.array(self.sim.data.site_xmat[mother_grip_id])
 
@@ -345,13 +345,53 @@ class CableInsertionEnv(TwoArmEnv):
             return np.array(self.sim.data.site_xpos[father_grip_id])
 
         @sensor(modality=modality)
-        def father_grip_ori(obs_cache):
+        def father_grip_mat(obs_cache):
             father_grip_id = self.sim.model.site_name2id(self._important_sites["father_grip"])
             return np.array(self.sim.data.site_xmat[father_grip_id])
 
+        @sensor(modality=modality)
+        def engineered_encoding(obs_cache):
+            # Important data
+            robot0_gripper_pos = self._eef0_xpos
+            robot1_gripper_pos = self._eef1_xpos
 
-        sensors = [mother_grip_pos, mother_grip_ori, father_grip_pos, father_grip_ori]
-        names = [f"mother_grip_pos", "mother_grip_ori", "father_grip_pos", "father_grip_ori"]
+            mother_grip_id = self.sim.model.site_name2id(self._important_sites["mother_grip"])
+            mother_grip_pos = np.array(self.sim.data.site_xpos[mother_grip_id])
+            mother_grip_mat = np.array(self.sim.data.site_xmat[mother_grip_id]).reshape([3, 3])
+            father_grip_id = self.sim.model.site_name2id(self._important_sites["father_grip"])
+            father_grip_pos = np.array(self.sim.data.site_xpos[father_grip_id])
+            father_grip_mat = np.array(self.sim.data.site_xmat[father_grip_id]).reshape([3, 3])
+
+            mother_tip_id = self.sim.model.site_name2id(self._important_sites["mother_tip"])
+            mother_tip_pos = np.array(self.sim.data.site_xpos[mother_tip_id])
+            father_tip_id = self.sim.model.site_name2id(self._important_sites["father_tip"])
+            father_tip_pos = np.array(self.sim.data.site_xpos[father_tip_id])
+            mother_inner_tip_id = self.sim.model.site_name2id(self._important_sites["mother_inner_tip"])
+            mother_inner_tip = np.array(self.sim.data.site_xpos[mother_inner_tip_id])
+
+            # Calculate encoding based on the HinDRL article (https://arxiv.org/pdf/2112.00597.pdf)
+            distance_to_mother_grip = np.linalg.norm(robot0_gripper_pos - mother_grip_pos)
+            distance_to_father_grip = np.linalg.norm(robot1_gripper_pos - father_grip_pos)
+            distance_between_cable_tips = np.linalg.norm(father_tip_pos - mother_tip_pos)
+            grasp_mother = self._check_grasp(self.robots[0].gripper, "cable_stand_mother_contact")
+            grasp_father = self._check_grasp(self.robots[1].gripper, "cable_stand_father_contact")
+
+            # y and z axis is mixed in the respective mujoco sites,
+            #  so we are calculating the dot product between the y axis
+            cable_z_product = np.dot(mother_grip_mat @ np.array([[0], [1], [0]]).squeeze(),
+                                     father_grip_mat @ np.array([[0], [1], [0]]).squeeze())
+
+            z_mother = mother_grip_mat @ np.array([[0], [1], [0]]).squeeze()
+            socket_distance_vector = father_tip_pos - mother_inner_tip
+            z_distance_to_socket = np.dot(z_mother, socket_distance_vector)
+
+            encoding = np.hstack([distance_to_mother_grip, distance_to_father_grip, distance_between_cable_tips,
+                                  grasp_mother, grasp_father, cable_z_product, z_distance_to_socket])
+            print(encoding)
+            return encoding
+
+        sensors = [mother_grip_pos, mother_grip_mat, father_grip_pos, father_grip_mat, engineered_encoding]
+        names = [f"mother_grip_pos", "mother_grip_mat", "father_grip_pos", "father_grip_mat", "engineered_encoding"]
 
         # Create observables for this robot
         for name, s in zip(names, sensors):
@@ -372,7 +412,7 @@ class CableInsertionEnv(TwoArmEnv):
         father_tip_ori = self.sim.data.site_xmat[father_tip_id].reshape([3, 3])
         father_tip_z_ori = np.matmul(father_tip_ori, np.array([[0], [1], [0]])) # Z and Y axis is changed in the xml site
 
-        mother_tip_id = self.sim.model.site_name2id(self._important_sites["mother_inner_tip"])
+        mother_tip_id = self.sim.model.site_name2id(self._important_sites["mother_tip"])
         mother_tip_pos = np.array(self.sim.data.site_xpos[mother_tip_id])
         mother_tip_ori = self.sim.data.site_xmat[mother_tip_id].reshape([3, 3])
         mother_tip_z_ori = np.matmul(mother_tip_ori, np.array([[0], [1], [0]])) # Z and Y axis is changed in the xml site
@@ -408,21 +448,12 @@ class CableInsertionEnv(TwoArmEnv):
         """
         Sites used to aid visualization by human. (usually "grip_site" and "grip_cylinder")
         (and should be hidden from robots)
-
-        Returns:
-            dict:
-
-                :`'grip_site'`: Name of grip actuation intersection location site
-                :`'grip_cylinder'`: Name of grip actuation z-axis location site
-                :`'ee'`: Name of end effector site
-                :`'ee_x'`: Name of end effector site (x-axis)
-                :`'ee_y'`: Name of end effector site (y-axis)
-                :`'ee_z'`: Name of end effector site (z-axis)
         """
         return {
             "father_grip": "cable_stand_father_grip",
             "father_tip": "cable_stand_father_tip",
             "mother_grip": "cable_stand_mother_grip",
+            "mother_tip": "cable_stand_mother_tip",
             "mother_inner_tip": "cable_stand_mother_inner_tip"
         }
 

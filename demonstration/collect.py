@@ -100,8 +100,7 @@ def gather_demonstrations_as_hdf5(directory, out_dir, env_info):
         state_paths = os.path.join(directory, ep_directory, "state_*.npz")
         states = []
         actions = []
-        observations = []
-        torque_actions = []
+        engineered_encodings = []
 
         for state_file in sorted(glob(state_paths)):
             dic = np.load(state_file, allow_pickle=True)
@@ -110,8 +109,7 @@ def gather_demonstrations_as_hdf5(directory, out_dir, env_info):
             states.extend(dic["states"])
             for ai in dic["action_infos"]:
                 actions.append(ai["actions"])
-                observations.append(ai["observations"])
-                torque_actions.append(ai["torque_actions"])
+                engineered_encodings.append(ai["engineered_encoding"])
 
         if len(states) == 0:
             continue

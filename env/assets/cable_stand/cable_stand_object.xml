@@ -622,6 +622,12 @@
                                                                                                           rgba="1 0 0 1"
                                                                                                           type="box"
                                                                                                           group="1"/>
+                                                                                                    <site name="mother_tip"
+                                                                                                          pos="0 0.096 0"
+                                                                                                          size="0.001 0.001 0.001"
+                                                                                                          rgba="1 0 0 1"
+                                                                                                          type="box"
+                                                                                                          group="1"/>
                                                                                                     <inertial
                                                                                                             pos="-6.05724e-10 0.0488878 -1.49571e-09"
                                                                                                             quat="0.707107 0.707107 0 0"

@@ -10,7 +10,7 @@ from model.hindrl_buffer import HinDRLReplayBuffer, HinDRLTQC
 from utils import create_log_dir, save_dict, get_baseline_model_with_name
 
 config = {
-    "demonstration_hdf5": "/home/mark/tum/2022ss/thesis/master_thesis/demonstration/collection/1654605742_6722271/demo.hdf5",
+    "demonstration_hdf5": "/home/mark/tum/2022ss/thesis/master_thesis/demonstration/collection/1655200784_7997794/demo.hdf5",
     "model_config":{
             "policy": "MultiInputPolicy",
             "buffer_size": 1000000,
@@ -27,9 +27,8 @@ config = {
 
 def _setup_training(demonstration_hdf5, model_config):
     print("Creating env...")
-    controller_config = load_controller_config(default_controller="OSC_POSE")
-    controller_config['control_delta'] = False
-    controller_config['kp'] = 150
+    controller_config = load_controller_config(default_controller="IK_POSE")
+    controller_config['kp'] = 100
     horizon = 1000
 
     env = make_vec_env(CableInsertionEnv,

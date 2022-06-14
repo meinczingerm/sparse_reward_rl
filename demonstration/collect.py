@@ -200,6 +200,8 @@ def collect_demonstrations(episode_num=10):
         else:
             unsuccesful_episode_dirs.append(env.ep_directory)
 
+        print(f"Progress: {number_of_succesful_demonstrations}/{episode_num}")
+
     for directory in unsuccesful_episode_dirs:
         shutil.rmtree(directory)
 
@@ -211,5 +213,5 @@ def read_hdf5_file(file_path):
         print("k")
 
 if __name__ == '__main__':
-    collect_demonstrations(1)
+    collect_demonstrations(3)
     # read_hdf5_file("/home/mark/tum/2022ss/thesis/master_thesis/demonstration/collection/1654522800_8797252/demo.hdf5")

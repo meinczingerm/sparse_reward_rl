@@ -221,8 +221,10 @@ class CableInsertionEnv(TwoArmEnv):
         )
 
         warnings.warn("Observation space is not configured")
-        self.action_space = spaces.Box(controller_configs["input_min"], controller_configs["input_max"],
-                                       shape=(14,), dtype="float32")
+        self.action_space = spaces.Box(np.hstack([self.robots[0].controller.input_min,
+                                                 self.robots[1].controller.input_min]),
+                                       np.hstack([self.robots[0].controller.input_max,
+                                                 self.robots[1].controller.input_max]), dtype="float32")
         self.observation_space = spaces.Dict(
             dict(
                 desired_goal=spaces.Box(

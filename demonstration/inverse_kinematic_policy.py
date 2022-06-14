@@ -240,7 +240,6 @@ class IKDemonstrationPolicy:
         random_quat = mat2quat(random_rotation @ input_mat)
         if random_quat[0] < 0:
             random_quat = random_quat * -1  # without -1 the goal quaternion is unstable
-        print(random_quat)
         return random_quat
 
 

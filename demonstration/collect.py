@@ -18,6 +18,7 @@ from robosuite import load_controller_config
 from robosuite.utils.camera_utils import DemoPlaybackCameraMover
 from robosuite.wrappers import DataCollectionWrapper, VisualizationWrapper
 
+from demonstration.inverse_kinematic_policy import IKDemonstrationPolicy
 from demonstration.observation_collection_wrapper import ObservationCollectionWrapper
 from demonstration.policy import DemonstrationPolicy
 from env.cable_insertion_env import CableInsertionEnv
@@ -100,6 +101,7 @@ def gather_demonstrations_as_hdf5(directory, out_dir, env_info):
         states = []
         actions = []
         observations = []
+        torque_actions = []
 
         for state_file in sorted(glob(state_paths)):
             dic = np.load(state_file, allow_pickle=True)
@@ -109,6 +111,7 @@ def gather_demonstrations_as_hdf5(directory, out_dir, env_info):
             for ai in dic["action_infos"]:
                 actions.append(ai["actions"])
                 observations.append(ai["observations"])
+                torque_actions.append(ai["torque_actions"])
 
         if len(states) == 0:
             continue
@@ -132,6 +135,7 @@ def gather_demonstrations_as_hdf5(directory, out_dir, env_info):
         ep_data_grp.create_dataset("states", data=np.array(states))
         ep_data_grp.create_dataset("actions", data=np.array(actions))
         ep_data_grp.create_dataset("observations", data=np.array(observations))
+        ep_data_grp.create_dataset("torque_actions", data=np.array(torque_actions))
 
     # write dataset attributes (metadata)
     now = datetime.datetime.now()
@@ -150,9 +154,8 @@ def collect_demonstrations(episode_num=10):
     :param episode_num: number of succesful episodes to collect
     :return: None
     """
-    controller_config = load_controller_config(default_controller="OSC_POSE")
-    controller_config['control_delta'] = False
-    controller_config['kp'] = 150
+    controller_config = load_controller_config(default_controller="IK_POSE")
+    controller_config['kp'] = 100
 
     env = CableInsertionEnv(robots=["Panda", "Panda"],  # load a Sawyer robot and a Panda robot
                             gripper_types="default",  # use default grippers per robot arm
@@ -173,7 +176,7 @@ def collect_demonstrations(episode_num=10):
         "controller_configs": controller_config,
     }
     env_config = json.dumps(env_config)
-    demonstration_policy = DemonstrationPolicy()
+    demonstration_policy = IKDemonstrationPolicy()
 
     # Wrap this with visualization wrapper
     env = VisualizationWrapper(env)
@@ -202,6 +205,11 @@ def collect_demonstrations(episode_num=10):
 
     gather_demonstrations_as_hdf5(tmp_directory, new_dir, env_config)
 
+def read_hdf5_file(file_path):
+    with h5py.File(file_path, "r") as f:
+        demo_1 = f["data"]["demo_1"]
+        print("k")
 
 if __name__ == '__main__':
-    collect_demonstrations(5)
+    collect_demonstrations(1)
+    # read_hdf5_file("/home/mark/tum/2022ss/thesis/master_thesis/demonstration/collection/1654522800_8797252/demo.hdf5")

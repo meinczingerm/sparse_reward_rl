@@ -10,7 +10,7 @@ from model.hindrl_buffer import HinDRLReplayBuffer, HinDRLTQC
 from utils import create_log_dir, save_dict, get_baseline_model_with_name
 
 config = {
-    "demonstration_hdf5": "/home/mark/tum/2022ss/thesis/master_thesis/demonstration/collection/1655200784_7997794/demo.hdf5",
+    "demonstration_hdf5": "/home/mark/tum/2022ss/thesis/master_thesis/demonstration/collection/1655215933_278294/demo.hdf5",
     "model_config":{
             "policy": "MultiInputPolicy",
             "buffer_size": 1000000,
@@ -33,12 +33,13 @@ def _setup_training(demonstration_hdf5, model_config):
 
     env = make_vec_env(CableInsertionEnv,
                        env_kwargs={
+                           "use_desired_goal": True,
                            "robots": ["Panda", "Panda"],
                            "gripper_types": "default",
                            "controller_configs": controller_config,
                            "env_configuration": "single-arm-parallel",
                            "render_camera": None,
-                           "has_renderer": True,
+                           "has_renderer": False,
                            "has_offscreen_renderer": False,
                            "control_freq": 20,
                            "horizon": horizon,

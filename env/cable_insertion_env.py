@@ -23,6 +23,16 @@ class CableInsertionEnv(TwoArmEnv):
             (e.g: "Sawyer" would generate one arm; ["Panda", "Panda", "Sawyer"] would generate three robot arms)
             Note: Must be either 2 single single-arm robots or 1 bimanual robot!
 
+        use_engineered_observation_encoding (bool): True if observation is the engineered encoding, False if raw
+                                                    observation is used.
+
+        use_desired_goal (bool): If True then "desired_goal" will be added to the observation, specified by
+                                 get_desired_goal_fn.
+
+        get_desired_goal_fn (function): Function with no input which returns desired_goal as flattened
+                                        np.array with dimensions of "achieved_goal".  This function can be used to can
+                                        pass goals from demonstrations.
+
         env_configuration (str): Specifies how to position the robots within the environment. Can be either:
 
             :`'bimanual'`: Only applicable for bimanual robot setups. Sets up the (single) bimanual robot on the -x
@@ -149,6 +159,9 @@ class CableInsertionEnv(TwoArmEnv):
     def __init__(
         self,
         robots,
+        use_engineered_observation_encoding=True,  # special for HinDRL
+        use_desired_goal=False,  # special for HinDRL
+        get_desired_goal_fn=None,  # special for HinDRL
         env_configuration="default",
         controller_configs=None,
         gripper_types="default",
@@ -178,6 +191,12 @@ class CableInsertionEnv(TwoArmEnv):
         renderer="mujoco",
         renderer_config=None,
     ):
+
+        self.use_engineered_observation_encoding = use_engineered_observation_encoding
+        self.use_desired_goal = use_desired_goal
+        self.get_desired_goal_fn = get_desired_goal_fn
+        self.desired_goal = None
+
         # settings for table top
         self.table_full_size = table_full_size
         self.table_friction = table_friction
@@ -225,19 +244,28 @@ class CableInsertionEnv(TwoArmEnv):
                                                  self.robots[1].controller.input_min]),
                                        np.hstack([self.robots[0].controller.input_max,
                                                  self.robots[1].controller.input_max]), dtype="float32")
-        self.observation_space = spaces.Dict(
-            dict(
-                desired_goal=spaces.Box(
-                    -np.inf, np.inf, shape=(5,), dtype="float32"
-                ),
-                achieved_goal=spaces.Box(
-                    -np.inf, np.inf, shape=(5,), dtype="float32"
-                ),
-                observation=spaces.Box(
-                    -np.inf, np.inf, shape=(5,), dtype="float32"
-                ),
+
+        warnings.warn("Observation space uses unlimited box. Should be updated.")
+        if self.use_desired_goal:
+            self.observation_space = spaces.Dict(
+                dict(observation=spaces.Box(
+                        -np.inf, np.inf, shape=(7,), dtype="float32"
+                    ),
+                    desired_goal=spaces.Box(
+                        -np.inf, np.inf, shape=(7,), dtype="float32"
+                    ),
+                    achieved_goal=spaces.Box(
+                        -np.inf, np.inf, shape=(7,), dtype="float32"
+                    )
+                )
             )
-        )
+        else:
+            self.observation_space = spaces.Dict(
+                dict(observation=spaces.Box(
+                        -np.inf, np.inf, shape=(7,), dtype="float32"
+                    )
+                )
+            )
 
         self.metadata = None
         self.spec = None
@@ -258,6 +286,18 @@ class CableInsertionEnv(TwoArmEnv):
             reward = -1
 
         return reward
+
+    def reset(self):
+        obs = super(CableInsertionEnv, self).reset()
+        if self.get_desired_goal_fn is not None:
+            self.desired_goal = self.get_desired_goal_fn()
+            assert self.desired_goal.shape == self.observation_space["desired_goal"].shape
+
+        if self.use_desired_goal:
+            assert self.get_desired_goal_fn is not None
+
+        return obs
+
 
     def _load_model(self):
         """
@@ -387,11 +427,23 @@ class CableInsertionEnv(TwoArmEnv):
 
             encoding = np.hstack([distance_to_mother_grip, distance_to_father_grip, distance_between_cable_tips,
                                   grasp_mother, grasp_father, cable_z_product, z_distance_to_socket])
-            print(encoding)
             return encoding
 
-        sensors = [mother_grip_pos, mother_grip_mat, father_grip_pos, father_grip_mat, engineered_encoding]
-        names = [f"mother_grip_pos", "mother_grip_mat", "father_grip_pos", "father_grip_mat", "engineered_encoding"]
+        @sensor(modality=modality)
+        def get_desired_goal(obs_cache):
+            return self.desired_goal
+
+        if self.use_engineered_observation_encoding:
+            sensors = [mother_grip_pos, mother_grip_mat, father_grip_pos, father_grip_mat, engineered_encoding,
+                       engineered_encoding]
+            names = [f"mother_grip_pos", "mother_grip_mat", "father_grip_pos", "father_grip_mat", "observation",
+                     "achieved_goal"]
+        else:
+            raise NotImplementedError
+
+        if self.use_desired_goal:
+            sensors.append(get_desired_goal)
+            names.append("desired_goal")
 
         # Create observables for this robot
         for name, s in zip(names, sensors):

@@ -132,8 +132,7 @@ def gather_demonstrations_as_hdf5(directory, out_dir, env_info):
         # write datasets for states and actions
         ep_data_grp.create_dataset("states", data=np.array(states))
         ep_data_grp.create_dataset("actions", data=np.array(actions))
-        ep_data_grp.create_dataset("observations", data=np.array(observations))
-        ep_data_grp.create_dataset("torque_actions", data=np.array(torque_actions))
+        ep_data_grp.create_dataset("engineered_encodings", data=np.array(engineered_encodings))
 
     # write dataset attributes (metadata)
     now = datetime.datetime.now()
@@ -211,5 +210,5 @@ def read_hdf5_file(file_path):
         print("k")
 
 if __name__ == '__main__':
-    collect_demonstrations(3)
+    collect_demonstrations(2)
     # read_hdf5_file("/home/mark/tum/2022ss/thesis/master_thesis/demonstration/collection/1654522800_8797252/demo.hdf5")

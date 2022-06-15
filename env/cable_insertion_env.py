@@ -1,8 +1,10 @@
 import os.path
+import warnings
 from collections import OrderedDict
 
 import numpy as np
 import robosuite.utils.transform_utils as T
+from gym.vector.utils import spaces
 from robosuite.environments.manipulation.two_arm_env import TwoArmEnv
 from robosuite.models.arenas import TableArena
 from robosuite.models.objects import MujocoXMLObject
@@ -20,6 +22,16 @@ class CableInsertionEnv(TwoArmEnv):
         robots (str or list of str): Specification for specific robot arm(s) to be instantiated within this env
             (e.g: "Sawyer" would generate one arm; ["Panda", "Panda", "Sawyer"] would generate three robot arms)
             Note: Must be either 2 single single-arm robots or 1 bimanual robot!
+
+        use_engineered_observation_encoding (bool): True if observation is the engineered encoding, False if raw
+                                                    observation is used.
+
+        use_desired_goal (bool): If True then "desired_goal" will be added to the observation, specified by
+                                 get_desired_goal_fn.
+
+        get_desired_goal_fn (function): Function with no input which returns desired_goal as flattened
+                                        np.array with dimensions of "achieved_goal".  This function can be used to can
+                                        pass goals from demonstrations.
 
         env_configuration (str): Specifies how to position the robots within the environment. Can be either:
 
@@ -147,6 +159,9 @@ class CableInsertionEnv(TwoArmEnv):
     def __init__(
         self,
         robots,
+        use_engineered_observation_encoding=True,  # special for HinDRL
+        use_desired_goal=False,  # special for HinDRL
+        get_desired_goal_fn=None,  # special for HinDRL
         env_configuration="default",
         controller_configs=None,
         gripper_types="default",
@@ -176,6 +191,12 @@ class CableInsertionEnv(TwoArmEnv):
         renderer="mujoco",
         renderer_config=None,
     ):
+
+        self.use_engineered_observation_encoding = use_engineered_observation_encoding
+        self.use_desired_goal = use_desired_goal
+        self.get_desired_goal_fn = get_desired_goal_fn
+        self.desired_goal = None
+
         # settings for table top
         self.table_full_size = table_full_size
         self.table_friction = table_friction
@@ -218,6 +239,37 @@ class CableInsertionEnv(TwoArmEnv):
             renderer_config=renderer_config,
         )
 
+        warnings.warn("Observation space is not configured")
+        self.action_space = spaces.Box(np.hstack([self.robots[0].controller.input_min,
+                                                 self.robots[1].controller.input_min]),
+                                       np.hstack([self.robots[0].controller.input_max,
+                                                 self.robots[1].controller.input_max]), dtype="float32")
+
+        warnings.warn("Observation space uses unlimited box. Should be updated.")
+        if self.use_desired_goal:
+            self.observation_space = spaces.Dict(
+                dict(observation=spaces.Box(
+                        -np.inf, np.inf, shape=(7,), dtype="float32"
+                    ),
+                    desired_goal=spaces.Box(
+                        -np.inf, np.inf, shape=(7,), dtype="float32"
+                    ),
+                    achieved_goal=spaces.Box(
+                        -np.inf, np.inf, shape=(7,), dtype="float32"
+                    )
+                )
+            )
+        else:
+            self.observation_space = spaces.Dict(
+                dict(observation=spaces.Box(
+                        -np.inf, np.inf, shape=(7,), dtype="float32"
+                    )
+                )
+            )
+
+        self.metadata = None
+        self.spec = None
+
     def reward(self, action=None):
         """
         Sparse reward function for the task.
@@ -234,6 +286,18 @@ class CableInsertionEnv(TwoArmEnv):
             reward = -1
 
         return reward
+
+    def reset(self):
+        obs = super(CableInsertionEnv, self).reset()
+        if self.get_desired_goal_fn is not None:
+            self.desired_goal = self.get_desired_goal_fn()
+            assert self.desired_goal.shape == self.observation_space["desired_goal"].shape
+
+        if self.use_desired_goal:
+            assert self.get_desired_goal_fn is not None
+
+        return obs
+
 
     def _load_model(self):
         """
@@ -302,7 +366,7 @@ class CableInsertionEnv(TwoArmEnv):
         observables = super()._setup_observables()
 
         # Get prefix from robot model to avoid naming clashes for multiple robots and define observables modality
-        modality = f"object"
+        modality = f"objective"
 
         # cable grips
         @sensor(modality=modality)
@@ -311,7 +375,7 @@ class CableInsertionEnv(TwoArmEnv):
             return np.array(self.sim.data.site_xpos[mother_grip_id])
 
         @sensor(modality=modality)
-        def mother_grip_ori(obs_cache):
+        def mother_grip_mat(obs_cache):
             mother_grip_id = self.sim.model.site_name2id(self._important_sites["mother_grip"])
             return np.array(self.sim.data.site_xmat[mother_grip_id])
 
@@ -321,13 +385,65 @@ class CableInsertionEnv(TwoArmEnv):
             return np.array(self.sim.data.site_xpos[father_grip_id])
 
         @sensor(modality=modality)
-        def father_grip_ori(obs_cache):
+        def father_grip_mat(obs_cache):
             father_grip_id = self.sim.model.site_name2id(self._important_sites["father_grip"])
             return np.array(self.sim.data.site_xmat[father_grip_id])
 
+        @sensor(modality=modality)
+        def engineered_encoding(obs_cache):
+            # Important data
+            robot0_gripper_pos = self._eef0_xpos
+            robot1_gripper_pos = self._eef1_xpos
 
-        sensors = [mother_grip_pos, mother_grip_ori, father_grip_pos, father_grip_ori]
-        names = [f"mother_grip_pos", "mother_grip_ori", "father_grip_pos", "father_grip_ori"]
+            mother_grip_id = self.sim.model.site_name2id(self._important_sites["mother_grip"])
+            mother_grip_pos = np.array(self.sim.data.site_xpos[mother_grip_id])
+            mother_grip_mat = np.array(self.sim.data.site_xmat[mother_grip_id]).reshape([3, 3])
+            father_grip_id = self.sim.model.site_name2id(self._important_sites["father_grip"])
+            father_grip_pos = np.array(self.sim.data.site_xpos[father_grip_id])
+            father_grip_mat = np.array(self.sim.data.site_xmat[father_grip_id]).reshape([3, 3])
+
+            mother_tip_id = self.sim.model.site_name2id(self._important_sites["mother_tip"])
+            mother_tip_pos = np.array(self.sim.data.site_xpos[mother_tip_id])
+            father_tip_id = self.sim.model.site_name2id(self._important_sites["father_tip"])
+            father_tip_pos = np.array(self.sim.data.site_xpos[father_tip_id])
+            mother_inner_tip_id = self.sim.model.site_name2id(self._important_sites["mother_inner_tip"])
+            mother_inner_tip = np.array(self.sim.data.site_xpos[mother_inner_tip_id])
+
+            # Calculate encoding based on the HinDRL article (https://arxiv.org/pdf/2112.00597.pdf)
+            distance_to_mother_grip = np.linalg.norm(robot0_gripper_pos - mother_grip_pos)
+            distance_to_father_grip = np.linalg.norm(robot1_gripper_pos - father_grip_pos)
+            distance_between_cable_tips = np.linalg.norm(father_tip_pos - mother_tip_pos)
+            grasp_mother = self._check_grasp(self.robots[0].gripper, "cable_stand_mother_contact")
+            grasp_father = self._check_grasp(self.robots[1].gripper, "cable_stand_father_contact")
+
+            # y and z axis is mixed in the respective mujoco sites,
+            #  so we are calculating the dot product between the y axis
+            cable_z_product = np.dot(mother_grip_mat @ np.array([[0], [1], [0]]).squeeze(),
+                                     father_grip_mat @ np.array([[0], [1], [0]]).squeeze())
+
+            z_mother = mother_grip_mat @ np.array([[0], [1], [0]]).squeeze()
+            socket_distance_vector = father_tip_pos - mother_inner_tip
+            z_distance_to_socket = np.dot(z_mother, socket_distance_vector)
+
+            encoding = np.hstack([distance_to_mother_grip, distance_to_father_grip, distance_between_cable_tips,
+                                  grasp_mother, grasp_father, cable_z_product, z_distance_to_socket])
+            return encoding
+
+        @sensor(modality=modality)
+        def get_desired_goal(obs_cache):
+            return self.desired_goal
+
+        if self.use_engineered_observation_encoding:
+            sensors = [mother_grip_pos, mother_grip_mat, father_grip_pos, father_grip_mat, engineered_encoding,
+                       engineered_encoding]
+            names = [f"mother_grip_pos", "mother_grip_mat", "father_grip_pos", "father_grip_mat", "observation",
+                     "achieved_goal"]
+        else:
+            raise NotImplementedError
+
+        if self.use_desired_goal:
+            sensors.append(get_desired_goal)
+            names.append("desired_goal")
 
         # Create observables for this robot
         for name, s in zip(names, sensors):
@@ -348,7 +464,7 @@ class CableInsertionEnv(TwoArmEnv):
         father_tip_ori = self.sim.data.site_xmat[father_tip_id].reshape([3, 3])
         father_tip_z_ori = np.matmul(father_tip_ori, np.array([[0], [1], [0]])) # Z and Y axis is changed in the xml site
 
-        mother_tip_id = self.sim.model.site_name2id(self._important_sites["mother_inner_tip"])
+        mother_tip_id = self.sim.model.site_name2id(self._important_sites["mother_tip"])
         mother_tip_pos = np.array(self.sim.data.site_xpos[mother_tip_id])
         mother_tip_ori = self.sim.data.site_xmat[mother_tip_id].reshape([3, 3])
         mother_tip_z_ori = np.matmul(mother_tip_ori, np.array([[0], [1], [0]])) # Z and Y axis is changed in the xml site
@@ -384,21 +500,12 @@ class CableInsertionEnv(TwoArmEnv):
         """
         Sites used to aid visualization by human. (usually "grip_site" and "grip_cylinder")
         (and should be hidden from robots)
-
-        Returns:
-            dict:
-
-                :`'grip_site'`: Name of grip actuation intersection location site
-                :`'grip_cylinder'`: Name of grip actuation z-axis location site
-                :`'ee'`: Name of end effector site
-                :`'ee_x'`: Name of end effector site (x-axis)
-                :`'ee_y'`: Name of end effector site (y-axis)
-                :`'ee_z'`: Name of end effector site (z-axis)
         """
         return {
             "father_grip": "cable_stand_father_grip",
             "father_tip": "cable_stand_father_tip",
             "mother_grip": "cable_stand_mother_grip",
+            "mother_tip": "cable_stand_mother_tip",
             "mother_inner_tip": "cable_stand_mother_inner_tip"
         }
 

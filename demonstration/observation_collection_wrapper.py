@@ -32,10 +32,7 @@ class ObservationCollectionWrapper(DataCollectionWrapper):
 
             info = {}
             info["actions"] = np.array(action)
-            info["observations"] = np.hstack([ret[0]['robot0_joint_vel'], action[6], ret[0]['robot1_joint_vel'],
-                                             action[13]])
-            info["torque_actions"] = np.hstack([self.env.env.robots[0].recent_torques.last, action[6],
-                                               self.env.env.robots[1].recent_torques.last, action[13]])
+            info["engineered_encoding"] = ret[0]["engineered_encoding"]
             self.action_infos.append(info)
 
         # flush collected data to disk if necessary

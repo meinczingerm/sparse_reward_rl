@@ -4,7 +4,8 @@ import numpy as np
 from robosuite import load_controller_config
 from robosuite.utils.transform_utils import quat2mat, get_orientation_error, mat2quat, euler2mat
 
-from env.cable_insertion_env import CableInsertionEnv
+from env.base import CableManipulationBase
+from env.cable_insertion import CableInsertionEnv
 
 
 class RobotTarget:
@@ -252,14 +253,12 @@ if __name__ == '__main__':
                             gripper_types="default",  # use default grippers per robot arm
                             controller_configs=controller_config,  # each arm is controlled using OSC
                             env_configuration="single-arm-parallel",
-                            render_camera=None,# (two-arm envs only) arms face each other
-                            has_renderer=True,  # no on-screen rendering
-                            has_offscreen_renderer=False,  # no off-screen rendering
-                            control_freq=20,  # 20 hz control for applied actions
-                            horizon=10000,  # each episode terminates after 200 steps
-                            use_object_obs=True,  # provide object observations to agent
-                            use_camera_obs=False,  # don't provide image observations to agent
-                            reward_shaping=True)  # use a dense reward signal for learning)
+                            render_camera=None,
+                            has_renderer=True,
+                            has_offscreen_renderer=False,
+                            control_freq=20,
+                            horizon=10000,
+                            use_camera_obs=False)
 
     demonstration_policy = IKDemonstrationPolicy()
 

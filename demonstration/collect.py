@@ -21,7 +21,8 @@ from robosuite.wrappers import DataCollectionWrapper, VisualizationWrapper
 from demonstration.inverse_kinematic_policy import IKDemonstrationPolicy
 from demonstration.observation_collection_wrapper import ObservationCollectionWrapper
 from demonstration.policy import DemonstrationPolicy
-from env.cable_insertion_env import CableInsertionEnv
+from env.base import CableManipulationBase
+from env.cable_insertion import CableInsertionEnv
 from utils import get_project_root_path
 
 
@@ -158,14 +159,12 @@ def collect_demonstrations(episode_num=10):
                             gripper_types="default",  # use default grippers per robot arm
                             controller_configs=controller_config,  # each arm is controlled using OSC
                             env_configuration="single-arm-parallel",
-                            render_camera=None,# (two-arm envs only) arms face each other
-                            has_renderer=True,  # no on-screen rendering
-                            has_offscreen_renderer=False,  # no off-screen rendering
-                            control_freq=20,  # 20 hz control for applied actions
-                            horizon=500,  # each episode terminates after 200 steps
-                            use_object_obs=True,  # provide object observations to agent
-                            use_camera_obs=False,  # don't provide image observations to agent
-                            reward_shaping=True)  # use a dense reward signal for learning)
+                            render_camera=None,
+                            has_renderer=True,
+                            has_offscreen_renderer=False,
+                            control_freq=20,
+                            horizon=10000,
+                            use_camera_obs=False)
 
     env_config = {
         "env_name": "CableInsertionEnv",
@@ -204,10 +203,12 @@ def collect_demonstrations(episode_num=10):
 
     gather_demonstrations_as_hdf5(tmp_directory, new_dir, env_config)
 
+
 def read_hdf5_file(file_path):
     with h5py.File(file_path, "r") as f:
         demo_1 = f["data"]["demo_1"]
         print("k")
+
 
 if __name__ == '__main__':
     collect_demonstrations(2)

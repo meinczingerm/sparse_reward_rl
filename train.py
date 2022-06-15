@@ -5,7 +5,7 @@ from sb3_contrib import TQC
 from sb3_contrib.common.wrappers import TimeFeatureWrapper
 from stable_baselines3.common.env_util import make_vec_env
 
-from env.cable_insertion_env import CableInsertionEnv
+from env.base import CableManipulationBase
 from model.hindrl_buffer import HinDRLReplayBuffer, HinDRLTQC, HerReplayBufferWithDemonstrationGoals
 from utils import create_log_dir, save_dict, get_baseline_model_with_name
 
@@ -31,7 +31,7 @@ def _setup_training(demonstration_hdf5, model_config):
     controller_config['kp'] = 100
     horizon = 1000
 
-    env = make_vec_env(CableInsertionEnv,
+    env = make_vec_env(CableManipulationBase,
                        env_kwargs={
                            "use_desired_goal": True,
                            "robots": ["Panda", "Panda"],

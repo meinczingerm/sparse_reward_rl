@@ -32,7 +32,7 @@ class ObservationCollectionWrapper(DataCollectionWrapper):
 
             info = {}
             info["actions"] = np.array(action)
-            info["engineered_encoding"] = ret[0]["engineered_encoding"]
+            info["observation"] = ret[0]["observation"]
             self.action_infos.append(info)
 
         # flush collected data to disk if necessary

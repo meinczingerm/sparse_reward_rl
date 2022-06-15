@@ -2,7 +2,7 @@ import numpy as np
 import robosuite
 from robosuite import load_controller_config
 
-from env.base import CableManipulationBase
+from env.cable_manipulation_base import CableManipulationBase
 
 if __name__ == '__main__':
     controller_config = load_controller_config(default_controller="OSC_POSE")

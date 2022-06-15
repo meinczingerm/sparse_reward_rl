@@ -2,7 +2,7 @@ import h5py
 import numpy as np
 from robosuite import load_controller_config
 
-from env.base import CableManipulationBase
+from env.cable_manipulation_base import CableManipulationBase
 
 
 class ReplayedJointVelPolicy:

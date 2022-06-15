@@ -21,7 +21,7 @@ from robosuite.wrappers import DataCollectionWrapper, VisualizationWrapper
 from demonstration.inverse_kinematic_policy import IKDemonstrationPolicy
 from demonstration.observation_collection_wrapper import ObservationCollectionWrapper
 from demonstration.policy import DemonstrationPolicy
-from env.base import CableManipulationBase
+from env.cable_manipulation_base import CableManipulationBase
 from env.cable_insertion import CableInsertionEnv
 from utils import get_project_root_path
 

@@ -5,7 +5,7 @@ from sb3_contrib import TQC
 from sb3_contrib.common.wrappers import TimeFeatureWrapper
 from stable_baselines3.common.env_util import make_vec_env
 
-from env.base import CableManipulationBase
+from env.cable_manipulation_base import CableManipulationBase
 from model.hindrl_buffer import HinDRLReplayBuffer, HinDRLTQC, HerReplayBufferWithDemonstrationGoals
 from utils import create_log_dir, save_dict, get_baseline_model_with_name
 

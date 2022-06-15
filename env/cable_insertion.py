@@ -1,6 +1,6 @@
 import numpy as np
 
-from env.base import CableManipulationBase
+from env.cable_manipulation_base import CableManipulationBase
 from gym.vector.utils import spaces
 
 

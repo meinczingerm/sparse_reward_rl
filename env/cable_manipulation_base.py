@@ -273,9 +273,9 @@ class CableManipulationBase(TwoArmEnv):
             float: reward value
         """
         if self._check_success():
-            reward = 5000
+            reward = 1
         else:
-            reward = -1
+            reward = 0
 
         return reward
 

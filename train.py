@@ -6,7 +6,7 @@ from sb3_contrib.common.wrappers import TimeFeatureWrapper
 from stable_baselines3.common.env_util import make_vec_env
 
 from env.cable_insertion_env import CableInsertionEnv
-from model.hindrl_buffer import HinDRLReplayBuffer, HinDRLTQC
+from model.hindrl_buffer import HinDRLReplayBuffer, HinDRLTQC, HerReplayBufferWithDemonstrationGoals
 from utils import create_log_dir, save_dict, get_baseline_model_with_name
 
 config = {
@@ -53,7 +53,7 @@ def _setup_training(demonstration_hdf5, model_config):
     model_config['tensorboard_log'] = log_dir
     save_dict(config, os.path.join(log_dir, 'config.json'))
 
-    replay_buffer = HinDRLReplayBuffer(demonstration_hdf5, env, max_episode_length=horizon)
+    replay_buffer = HerReplayBufferWithDemonstrationGoals(demonstration_hdf5, env, max_episode_length=horizon)
     print("Env ready")
     model = HinDRLTQC(replay_buffer, **model_config)
     return env, model

@@ -1,3 +1,4 @@
+import itertools
 import os.path
 import warnings
 from abc import abstractmethod
@@ -10,168 +11,33 @@ from robosuite import load_controller_config
 from robosuite.environments.manipulation.single_arm_env import SingleArmEnv
 from robosuite.environments.manipulation.two_arm_env import TwoArmEnv
 from robosuite.models.arenas import TableArena, EmptyArena
-from robosuite.models.objects import MujocoXMLObject
+from robosuite.models.objects import MujocoXMLObject, CapsuleObject, BallObject
 from robosuite.models.tasks import ManipulationTask
+from robosuite.utils.mjcf_utils import CustomMaterial
 from robosuite.utils.observables import Observable, sensor
+from robosuite.utils.placement_samplers import UniformRandomSampler
 
 from utils import get_project_root_path
 
 
 class ParameterizedReachEnv(SingleArmEnv):
     """
-    This class corresponds to the lifting task for two robot arms.
-
-    Args:
-        robots (str or list of str): Specification for specific robot arm(s) to be instantiated within this env
-            (e.g: "Sawyer" would generate one arm; ["Panda", "Panda", "Sawyer"] would generate three robot arms)
-            Note: Must be either 2 single single-arm robots or 1 bimanual robot!
-
-        use_engineered_observation_encoding (bool): True if observation is the engineered encoding, False if raw
-                                                    observation is used.
-
-        use_desired_goal (bool): If True then "desired_goal" will be added to the observation, specified by
-                                 get_desired_goal_fn.
-
-        get_desired_goal_fn (function): Function with no input which returns desired_goal as flattened
-                                        np.array with dimensions of "achieved_goal".  This function can be used to can
-                                        pass goals from demonstrations.
-
-        env_configuration (str): Specifies how to position the robots within the environment. Can be either:
-
-            :`'bimanual'`: Only applicable for bimanual robot setups. Sets up the (single) bimanual robot on the -x
-                side of the table
-            :`'single-arm-parallel'`: Only applicable for multi single arm setups. Sets up the (two) single armed
-                robots next to each other on the -x side of the table
-            :`'single-arm-opposed'`: Only applicable for multi single arm setups. Sets up the (two) single armed
-                robots opposed from each others on the opposite +/-y sides of the table.
-
-        Note that "default" corresponds to either "bimanual" if a bimanual robot is used or "single-arm-opposed" if two
-        single-arm robots are used.
-
-        controller_configs (str or list of dict): If set, contains relevant demonstration parameters for creating a
-            custom demonstration. Else, uses the default demonstration for this specific task. Should either be single
-            dict if same demonstration is to be used for all robots or else it should be a list of the same length as
-            "robots" param
-
-        gripper_types (str or list of str): type of gripper, used to instantiate
-            gripper models from gripper factory. Default is "default", which is the default grippers(s) associated
-            with the robot(s) the 'robots' specification. None removes the gripper, and any other (valid) model
-            overrides the default gripper. Should either be single str if same gripper type is to be used for all
-            robots or else it should be a list of the same length as "robots" param
-
-        initialization_noise (dict or list of dict): Dict containing the initialization noise parameters.
-            The expected keys and corresponding value types are specified below:
-
-            :`'magnitude'`: The scale factor of uni-variate random noise applied to each of a robot's given initial
-                joint positions. Setting this value to `None` or 0.0 results in no noise being applied.
-                If "gaussian" type of noise is applied then this magnitude scales the standard deviation applied,
-                If "uniform" type of noise is applied then this magnitude sets the bounds of the sampling range
-            :`'type'`: Type of noise to apply. Can either specify "gaussian" or "uniform"
-
-            Should either be single dict if same noise value is to be used for all robots or else it should be a
-            list of the same length as "robots" param
-
-            :Note: Specifying "default" will automatically use the default noise settings.
-                Specifying None will automatically create the required dict with "magnitude" set to 0.0.
-
-        table_full_size (3-tuple): x, y, and z dimensions of the table.
-
-        table_friction (3-tuple): the three mujoco friction parameters for
-            the table.
-
-        use_camera_obs (bool): if True, every observation includes rendered image(s)
-
-        use_object_obs (bool): if True, include object (cube) information in
-            the observation.
-
-        reward_scale (None or float): Scales the normalized reward function by the amount specified.
-            If None, environment reward remains unnormalized
-
-        reward_shaping (bool): if True, use dense rewards.
-
-        placement_initializer (ObjectPositionSampler): if provided, will
-            be used to place objects on every reset, else a UniformRandomSampler
-            is used by default.
-
-        has_renderer (bool): If true, render the simulation state in
-            a viewer instead of headless mode.
-
-        has_offscreen_renderer (bool): True if using off-screen rendering
-
-        render_camera (str): Name of camera to render if `has_renderer` is True. Setting this value to 'None'
-            will result in the default angle being applied, which is useful as it can be dragged / panned by
-            the user using the mouse
-
-        render_collision_mesh (bool): True if rendering collision meshes in camera. False otherwise.
-
-        render_visual_mesh (bool): True if rendering visual meshes in camera. False otherwise.
-
-        render_gpu_device_id (int): corresponds to the GPU device id to use for offscreen rendering.
-            Defaults to -1, in which case the device will be inferred from environment variables
-            (GPUS or CUDA_VISIBLE_DEVICES).
-
-        control_freq (float): how many control signals to receive in every second. This sets the amount of
-            simulation time that passes between every action input.
-
-        horizon (int): Every episode lasts for exactly @horizon timesteps.
-
-        ignore_done (bool): True if never terminating the environment (ignore @horizon).
-
-        hard_reset (bool): If True, re-loads model, sim, and render object upon a reset call, else,
-            only calls sim.reset and resets all robosuite-internal variables
-
-        camera_names (str or list of str): name of camera to be rendered. Should either be single str if
-            same name is to be used for all cameras' rendering or else it should be a list of cameras to render.
-
-            :Note: At least one camera must be specified if @use_camera_obs is True.
-
-            :Note: To render all robots' cameras of a certain type (e.g.: "robotview" or "eye_in_hand"), use the
-                convention "all-{name}" (e.g.: "all-robotview") to automatically render all camera images from each
-                robot's camera list).
-
-        camera_heights (int or list of int): height of camera frame. Should either be single int if
-            same height is to be used for all cameras' frames or else it should be a list of the same length as
-            "camera names" param.
-
-        camera_widths (int or list of int): width of camera frame. Should either be single int if
-            same width is to be used for all cameras' frames or else it should be a list of the same length as
-            "camera names" param.
-
-        camera_depths (bool or list of bool): True if rendering RGB-D, and RGB otherwise. Should either be single
-            bool if same depth setting is to be used for all cameras or else it should be a list of the same length as
-            "camera names" param.
-
-        camera_segmentations (None or str or list of str or list of list of str): Camera segmentation(s) to use
-            for each camera. Valid options are:
-
-                `None`: no segmentation sensor used
-                `'instance'`: segmentation at the class-instance level
-                `'class'`: segmentation at the class level
-                `'element'`: segmentation at the per-geom level
-
-            If not None, multiple types of segmentations can be specified. A [list of str / str or None] specifies
-            [multiple / a single] segmentation(s) to use for all cameras. A list of list of str specifies per-camera
-            segmentation setting(s) to use.
-
-    Raises:
-        ValueError: [Invalid number of robots specified]
-        ValueError: [Invalid env configuration]
-        ValueError: [Invalid robots for specified env configuration]
+    Parameterized reach env from https://arxiv.org/pdf/2112.00597.pdf.
     """
 
     def __init__(
         self,
-        robots=["Sawyer"],
+        number_of_waypoints = 2,
+        robots="Sawyer",
         use_engineered_observation_encoding=True,  # special for HinDRL
         use_desired_goal=False,  # special for HinDRL
-        get_desired_goal_fn=None,  # special for HinDRL
         env_configuration="default",
-        gripper_types="default",
+        gripper_types=None,
         initialization_noise="default",
         use_camera_obs=False,
         has_renderer=True,
         has_offscreen_renderer=False,
-        render_camera="frontview",
+        render_camera=None,
         render_collision_mesh=False,
         render_visual_mesh=True,
         render_gpu_device_id=-1,
@@ -189,9 +55,11 @@ class ParameterizedReachEnv(SingleArmEnv):
     ):
 
         self.use_engineered_observation_encoding = use_engineered_observation_encoding
-        self.use_desired_goal = use_desired_goal
-        self.get_desired_goal_fn = get_desired_goal_fn
-        self.desired_goal = None
+        self.number_of_waypoints = number_of_waypoints  # including the final goal pose
+        self.idx_of_reached_waypoint = -1  # index for the last waypoint reached
+        self.goal_poses = self.get_random_goals()
+        self.placement_initializer = None
+
 
         controller_configs = load_controller_config(default_controller="IK_POSE")
         controller_configs['kp'] = 100
@@ -223,38 +91,82 @@ class ParameterizedReachEnv(SingleArmEnv):
         )
 
         warnings.warn("Observation space is not configured")
-        self.action_space = spaces.Box(np.hstack([self.robots[0].controller.input_min]),
-                                       np.hstack([self.robots[0].controller.input_max]), dtype="float32")
+        self.action_space = spaces.Box(self.robots[0].controller.input_min, self.robots[0].controller.input_max,
+                                       dtype="float32")
 
         warnings.warn("Observation space uses unlimited box. Should be updated.")
-        self.observation_space = self._get_observation_space()
+        self.observation_space = spaces.Dict(
+                dict(observation=spaces.Box(
+                        -np.inf, np.inf, shape=(6,), dtype="float32"
+                    ),
+                    desired_goal=spaces.Box(
+                        -np.inf, np.inf, shape=(6,), dtype="float32"
+                    ),
+                    achieved_goal=spaces.Box(
+                        -np.inf, np.inf, shape=(6,), dtype="float32"
+                    )
+                )
+            )
 
         self.metadata = None
         self.spec = None
 
-    @abstractmethod
-    def _get_observation_space(self):
-        """
-        Returns observation space as spaces dict usually with keys=["observation", "achieved_goal", "desired_goal"]
-        :return: observation space for the env defined as spaces.Dict({"key": spaces.box})
-        """
-        pass
+    # Quickfix for issue: https://github.com/ARISE-Initiative/robosuite/issues/321
+    @property
+    def _eef_xquat(self):
+        pf = 'gripper0_'
+        eef_xmat = np.array(self.sim.data.site_xmat[self.sim.model.site_name2id(pf + "grip_site")]).reshape(3, 3)
+        return T.mat2quat(eef_xmat)
 
-    @abstractmethod
+    def _get_desired_goal(self):
+        desired_pose = self.goal_poses[self.idx_of_reached_waypoint + 1]
+        desired_mask = np.zeros(self.number_of_waypoints)
+        desired_mask[:self.idx_of_reached_waypoint + 2] = 1
+        return np.hstack([desired_pose, desired_mask])
+
     def _get_engineered_encoding(self):
         """
         Calculates the heuristically engineered encoding of states.
         :return: encoding (flattened np.array)
         """
-        pass
+        if self._check_reached_next_goal():
+            self.idx_of_reached_waypoint += 1
 
-    @abstractmethod
+        gripper_pos = self._eef_xpos
+        gripper_axis_angle = T.quat2axisangle(self._eef_xquat)
+        progress_mask = np.zeros(self.number_of_waypoints)
+        progress_mask[:self.idx_of_reached_waypoint + 1] = 1
+        return np.hstack([gripper_pos, gripper_axis_angle, progress_mask])
+
+    def get_random_goals(self):
+        random_positions = [np.random.uniform(low=np.array([0, -0.5, 0]), high=np.array([1, 0.5, 1]))
+                            for _ in range(self.number_of_waypoints)]
+        random_axis_angle = [T.quat2axisangle(T.random_quat()) for _ in range(self.number_of_waypoints)]
+        goal_poses = [np.hstack([goal_pos, goal_axis_angle]) for goal_pos, goal_axis_angle in
+                      zip(random_positions, random_axis_angle)]
+        return goal_poses
+
+    def _check_reached_next_goal(self):
+        gripper_pos = self._eef_xpos
+        gripper_axis_angle = T.quat2axisangle(self._eef_xquat)
+        desired_goal = self._get_desired_goal()
+        desired_pos = desired_goal[0:3]
+        desired_axis_angle = desired_goal[3:6]
+
+        pos_dist = np.linalg.norm(gripper_pos - desired_pos)
+        axis_angle_dist = np.linalg.norm(gripper_axis_angle - desired_axis_angle)
+
+        return pos_dist < 0.005 and axis_angle_dist < 0.005
+
     def _check_success(self):
         """
         Checks succes of current state.
         :return: True if current state is succesful, False otherwise
         """
-        pass
+        if self.idx_of_reached_waypoint == self.number_of_waypoints - 1:
+            return True
+        else:
+            return False
 
     def reward(self, action=None):
         """
@@ -275,12 +187,10 @@ class ParameterizedReachEnv(SingleArmEnv):
 
     def reset(self):
         obs = super(ParameterizedReachEnv, self).reset()
-        if self.get_desired_goal_fn is not None:
-            self.desired_goal = self.get_desired_goal_fn()
-            assert self.desired_goal.shape == self.observation_space["desired_goal"].shape
 
-        if self.use_desired_goal:
-            assert self.get_desired_goal_fn is not None
+        # get new goals and reset progress
+        self.idx_of_reached_waypoint = -1
+        self.goal_poses = self.get_random_goals()
 
         return obs
 
@@ -296,10 +206,20 @@ class ParameterizedReachEnv(SingleArmEnv):
         # Arena always gets set to zero origin
         mujoco_arena.set_origin([0, 0, -0.92])
 
+        capsules = []
+        for i, _goal_pose in enumerate(self.goal_poses):
+            capsule = CapsuleObject(f"goal_{i}", size=np.array([0.01, 0.05]), joints=None, obj_type="visual",
+                                    material=CustomMaterial(texture=[0, 1, 0, 225], tex_name="tex", mat_name="mat"))
+            goal_quat = T.axisangle2quat(_goal_pose[3:])
+            capsule._obj.attrib["quat"] = f"{goal_quat[0]} {goal_quat[1]} {goal_quat[2]} {goal_quat[3]}"
+            capsule._obj.attrib["pos"] = f"{_goal_pose[0]} {_goal_pose[1]} {_goal_pose[2]}"
+            capsules.append(capsule)
+
         # task includes arena, robot, and objects of interest
         self.model = ManipulationTask(
             mujoco_arena=mujoco_arena,
             mujoco_robots=[robot.robot_model for robot in self.robots],
+            mujoco_objects=capsules
         )
 
     def _setup_references(self):
@@ -325,21 +245,17 @@ class ParameterizedReachEnv(SingleArmEnv):
 
         @sensor(modality=modality)
         def engineered_encoding(obs_cache):
-            return np.array([0])
+            return self._get_engineered_encoding()
 
         @sensor(modality=modality)
         def get_desired_goal(obs_cache):
-            return np.array([0])
+            return self._get_desired_goal()
 
         if self.use_engineered_observation_encoding:
-            sensors = [engineered_encoding, engineered_encoding]
-            names = ["observation", "achieved_goal"]
+            sensors = [engineered_encoding, engineered_encoding, get_desired_goal]
+            names = ["observation", "achieved_goal", "desired_goal"]
         else:
             raise NotImplementedError
-
-        if self.use_desired_goal:
-            sensors.append(get_desired_goal)
-            names.append("desired_goal")
 
         # Create observables for this robot
         for name, s in zip(names, sensors):

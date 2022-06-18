@@ -27,17 +27,17 @@ class ParameterizedReachEnv(SingleArmEnv):
 
     def __init__(
         self,
-        number_of_waypoints = 2,
-        robots="Sawyer",
+        number_of_waypoints=20,
+        robots="Panda",
         use_engineered_observation_encoding=True,  # special for HinDRL
         use_desired_goal=False,  # special for HinDRL
         env_configuration="default",
-        gripper_types=None,
+        gripper_types="default",
         initialization_noise="default",
         use_camera_obs=False,
         has_renderer=True,
         has_offscreen_renderer=False,
-        render_camera=None,
+        render_camera="frontview",
         render_collision_mesh=False,
         render_visual_mesh=True,
         render_gpu_device_id=-1,
@@ -63,6 +63,7 @@ class ParameterizedReachEnv(SingleArmEnv):
 
         controller_configs = load_controller_config(default_controller="IK_POSE")
         controller_configs['kp'] = 100
+
         super().__init__(
             robots=robots,
             env_configuration=env_configuration,
@@ -111,14 +112,16 @@ class ParameterizedReachEnv(SingleArmEnv):
         self.metadata = None
         self.spec = None
 
+
     # Quickfix for issue: https://github.com/ARISE-Initiative/robosuite/issues/321
     @property
     def _eef_xquat(self):
-        pf = 'gripper0_'
-        eef_xmat = np.array(self.sim.data.site_xmat[self.sim.model.site_name2id(pf + "grip_site")]).reshape(3, 3)
-        return T.mat2quat(eef_xmat)
+        eef_quat = T.convert_quat(self.sim.data.get_body_xquat(self.robots[0].robot_model.eef_name), to="xyzw")
+        return eef_quat
 
     def _get_desired_goal(self):
+        if self._check_success():
+            return np.zeros(self.observation_space["observation"].shape)
         desired_pose = self.goal_poses[self.idx_of_reached_waypoint + 1]
         desired_mask = np.zeros(self.number_of_waypoints)
         desired_mask[:self.idx_of_reached_waypoint + 2] = 1
@@ -139,11 +142,19 @@ class ParameterizedReachEnv(SingleArmEnv):
         return np.hstack([gripper_pos, gripper_axis_angle, progress_mask])
 
     def get_random_goals(self):
-        random_positions = [np.random.uniform(low=np.array([0, -0.5, 0]), high=np.array([1, 0.5, 1]))
+        random_positions = [np.random.uniform(low=np.array([0.4, -0.3, 0]), high=np.array([0.6, 0.3, 0.4]))
                             for _ in range(self.number_of_waypoints)]
-        random_axis_angle = [T.quat2axisangle(T.random_quat()) for _ in range(self.number_of_waypoints)]
+        random_axis_angles = [T.random_axis_angle(np.pi/4) for _ in range(self.number_of_waypoints)]
+        random_axis_angles = [rot_axis * rot_angle for rot_axis, rot_angle in random_axis_angles]
+        random_mats = [T.quat2mat(T.axisangle2quat(random_axis_angle)) @ T.quat2mat([1, 0, 0, 0]) for
+                      random_axis_angle in random_axis_angles]
+        random_quats = [T.mat2quat(random_mat) for random_mat in random_mats]
+        random_quats = [random_quat if random_quat[0] > 0 else random_quat * -1 for random_quat in random_quats]
+        random_axis_angles = [T.quat2axisangle(random_quat) for random_quat in random_quats]
+        for angle in random_axis_angles:
+            assert np.allclose(T.quat2axisangle(T.axisangle2quat(angle)), angle)
         goal_poses = [np.hstack([goal_pos, goal_axis_angle]) for goal_pos, goal_axis_angle in
-                      zip(random_positions, random_axis_angle)]
+                      zip(random_positions, random_axis_angles)]
         return goal_poses
 
     def _check_reached_next_goal(self):
@@ -156,7 +167,9 @@ class ParameterizedReachEnv(SingleArmEnv):
         pos_dist = np.linalg.norm(gripper_pos - desired_pos)
         axis_angle_dist = np.linalg.norm(gripper_axis_angle - desired_axis_angle)
 
-        return pos_dist < 0.005 and axis_angle_dist < 0.005
+        print(f"Angle_dist: {axis_angle_dist}")
+
+        return pos_dist < 0.005 and axis_angle_dist < 0.01
 
     def _check_success(self):
         """
@@ -186,12 +199,10 @@ class ParameterizedReachEnv(SingleArmEnv):
         return reward
 
     def reset(self):
-        obs = super(ParameterizedReachEnv, self).reset()
-
         # get new goals and reset progress
         self.idx_of_reached_waypoint = -1
         self.goal_poses = self.get_random_goals()
-
+        obs = super(ParameterizedReachEnv, self).reset()
         return obs
 
     def _load_model(self):
@@ -208,10 +219,11 @@ class ParameterizedReachEnv(SingleArmEnv):
 
         capsules = []
         for i, _goal_pose in enumerate(self.goal_poses):
-            capsule = CapsuleObject(f"goal_{i}", size=np.array([0.01, 0.05]), joints=None, obj_type="visual",
-                                    material=CustomMaterial(texture=[0, 1, 0, 225], tex_name="tex", mat_name="mat"))
+            capsule = CapsuleObject(f"goal_{i}", size=np.array([0.01, 0.02]), joints=None, obj_type="visual",
+                                    rgba=[0, 1, 0, i / self.number_of_waypoints])
             goal_quat = T.axisangle2quat(_goal_pose[3:])
-            capsule._obj.attrib["quat"] = f"{goal_quat[0]} {goal_quat[1]} {goal_quat[2]} {goal_quat[3]}"
+            capsule._obj.attrib["quat"] = f"{goal_quat[3]} {goal_quat[0]} {goal_quat[1]} {goal_quat[2]}"
+            print(f"{goal_quat[0]} {goal_quat[1]} {goal_quat[2]} {goal_quat[3]}")
             capsule._obj.attrib["pos"] = f"{_goal_pose[0]} {_goal_pose[1]} {_goal_pose[2]}"
             capsules.append(capsule)
 
@@ -281,7 +293,7 @@ class ParameterizedReachEnv(SingleArmEnv):
         reward = self.reward(action)
 
         # done if number of elapsed timesteps is greater than horizon
-        self.done = (self.timestep >= self.horizon) or reward == 5000
+        self.done = (self.timestep >= self.horizon) or self._check_success()
 
         return reward, self.done, {}
 

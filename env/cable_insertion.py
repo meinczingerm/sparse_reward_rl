@@ -83,7 +83,7 @@ class CableInsertionEnv(CableManipulationBase):
 
 
         pos_error = np.linalg.norm(father_tip_pos-mother_tip_pos, 2)
-        ori_error = np.linalg.norm(mother_tip_z_ori + father_tip_z_ori) # the two z direction has to be oppsite
+        ori_error = np.linalg.norm(mother_tip_z_ori + father_tip_z_ori)  # the two z direction has to be oppsite
         if pos_error < 0.003 and ori_error < 0.03:
             return True
         else:

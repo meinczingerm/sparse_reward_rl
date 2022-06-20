@@ -3,9 +3,12 @@ import os
 from robosuite import load_controller_config
 from sb3_contrib import TQC
 from sb3_contrib.common.wrappers import TimeFeatureWrapper
+from stable_baselines3.common.callbacks import EvalCallback, CallbackList
 from stable_baselines3.common.env_util import make_vec_env
 
 from env.cable_manipulation_base import CableManipulationBase
+from env.parameterized_reach import ParameterizedReachEnv
+from eval import EvalVideoCallback
 from model.hindrl_buffer import HinDRLReplayBuffer, HinDRLTQC, HerReplayBufferWithDemonstrationGoals
 from utils import create_log_dir, save_dict, get_baseline_model_with_name
 
@@ -20,8 +23,9 @@ config = {
             "tau": 0.05,
             "verbose": 1,
             "learning_starts": 10000,
-            "policy_kwargs": {"net_arch":[512, 512, 512], "n_critics":2},
-        }
+            "policy_kwargs": {"net_arch": [512, 512, 512], "n_critics": 2},
+        },
+    "env": {"name": "parameterised_reach"}
 }
 
 
@@ -31,36 +35,33 @@ def _setup_training(demonstration_hdf5, model_config):
     controller_config['kp'] = 100
     horizon = 1000
 
-    env = make_vec_env(CableManipulationBase,
-                       env_kwargs={
-                           "use_desired_goal": True,
-                           "robots": ["Panda", "Panda"],
-                           "gripper_types": "default",
-                           "controller_configs": controller_config,
-                           "env_configuration": "single-arm-parallel",
-                           "render_camera": None,
-                           "has_renderer": False,
-                           "has_offscreen_renderer": False,
-                           "control_freq": 20,
-                           "horizon": horizon,
-                           "use_object_obs": True,
-                           "use_camera_obs": False,
-                           "reward_shaping": True}
-                       )
+    env = make_vec_env(ParameterizedReachEnv)
 
     model_config["env"] = env
-    log_dir = create_log_dir("cable_insertion")
+    log_dir = create_log_dir(config["env"]["name"])
     model_config['tensorboard_log'] = log_dir
     save_dict(config, os.path.join(log_dir, 'config.json'))
 
     replay_buffer = HerReplayBufferWithDemonstrationGoals(demonstration_hdf5, env, max_episode_length=horizon)
     print("Env ready")
     model = HinDRLTQC(replay_buffer, **model_config)
-    return env, model
+    return env, model, log_dir
 
 
 def train(_config):
-    env, model = _setup_training(_config["demonstration_hdf5"], _config["model_config"])
+    env, model, log_dir = _setup_training(_config["demonstration_hdf5"], _config["model_config"])
+
+    eval_env = make_vec_env(ParameterizedReachEnv)
+    # Use deterministic actions for evaluation
+    eval_path = os.path.join(log_dir, 'train_eval')
+
+    video_callback = EvalVideoCallback(eval_env, best_model_save_path=eval_path,
+                                       log_path=eval_path, eval_freq=10000,
+                                       deterministic=True, render=False)
+    eval_callback = EvalCallback(eval_env, best_model_save_path=eval_path,
+                                 log_path=eval_path, eval_freq=1000, n_eval_episodes=10, deterministic=True,
+                                 render=False)
+    eval_callbacks = CallbackList([video_callback, eval_callback])
     model.learn(50000000)
 
 

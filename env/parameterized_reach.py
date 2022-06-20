@@ -27,15 +27,14 @@ class ParameterizedReachEnv(SingleArmEnv):
 
     def __init__(
         self,
-        number_of_waypoints=20,
+        number_of_waypoints=2,
         robots="Panda",
         use_engineered_observation_encoding=True,  # special for HinDRL
-        use_desired_goal=False,  # special for HinDRL
         env_configuration="default",
         gripper_types="default",
         initialization_noise="default",
         use_camera_obs=False,
-        has_renderer=True,
+        has_renderer=False,
         has_offscreen_renderer=False,
         render_camera="frontview",
         render_collision_mesh=False,
@@ -91,23 +90,29 @@ class ParameterizedReachEnv(SingleArmEnv):
             renderer_config=renderer_config,
         )
 
-        warnings.warn("Observation space is not configured")
         self.action_space = spaces.Box(self.robots[0].controller.input_min, self.robots[0].controller.input_max,
                                        dtype="float32")
 
-        warnings.warn("Observation space uses unlimited box. Should be updated.")
+        low_limit = [-2, -2, -2, -2 * np.pi, -2 * np.pi, -2 * np.pi]
+        low_limit.extend([0] * self.number_of_waypoints)
+        low_limit = np.array(low_limit)
+        high_limit = [2, 2, 2, 2 * np.pi, 2 * np.pi, 2 * np.pi]
+        high_limit.extend([1] * self.number_of_waypoints)
+        high_limit = np.array(high_limit)
+
         self.observation_space = spaces.Dict(
-                dict(observation=spaces.Box(
-                        -np.inf, np.inf, shape=(6,), dtype="float32"
-                    ),
-                    desired_goal=spaces.Box(
-                        -np.inf, np.inf, shape=(6,), dtype="float32"
-                    ),
-                    achieved_goal=spaces.Box(
-                        -np.inf, np.inf, shape=(6,), dtype="float32"
-                    )
-                )
-            )
+            dict(observation=spaces.Box(
+                    low=low_limit,
+                    high=high_limit,
+                    dtype="float32"),
+                 desired_goal=spaces.Box(
+                    low=low_limit,
+                    high=high_limit,
+                    dtype="float32"),
+                 achieved_goal=spaces.Box(
+                    low=low_limit,
+                    high=high_limit,
+                    dtype="float32")))
 
         self.metadata = None
         self.spec = None
@@ -167,8 +172,6 @@ class ParameterizedReachEnv(SingleArmEnv):
         pos_dist = np.linalg.norm(gripper_pos - desired_pos)
         axis_angle_dist = np.linalg.norm(gripper_axis_angle - desired_axis_angle)
 
-        print(f"Angle_dist: {axis_angle_dist}")
-
         return pos_dist < 0.005 and axis_angle_dist < 0.01
 
     def _check_success(self):
@@ -223,7 +226,6 @@ class ParameterizedReachEnv(SingleArmEnv):
                                     rgba=[0, 1, 0, i / self.number_of_waypoints])
             goal_quat = T.axisangle2quat(_goal_pose[3:])
             capsule._obj.attrib["quat"] = f"{goal_quat[3]} {goal_quat[0]} {goal_quat[1]} {goal_quat[2]}"
-            print(f"{goal_quat[0]} {goal_quat[1]} {goal_quat[2]} {goal_quat[3]}")
             capsule._obj.attrib["pos"] = f"{_goal_pose[0]} {_goal_pose[1]} {_goal_pose[2]}"
             capsules.append(capsule)
 

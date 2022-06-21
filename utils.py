@@ -1,9 +1,12 @@
 import os
 
 import gym
+from robosuite import load_controller_config
 from sb3_contrib import TQC
 from sb3_contrib.common.wrappers import TimeFeatureWrapper
 
+from matplotlib import animation
+import matplotlib.pyplot as plt
 from stable_baselines3 import *
 from stable_baselines3.common.env_util import make_vec_env
 
@@ -117,6 +120,15 @@ def setup_training(config):
     print("env ready")
     model = get_baseline_model_with_name(config["model"]["name"], config["model"]["kwargs"], env=env)
     return env, model, log_dir
+
+
+def get_controller_config(controller_type="IK"):
+    if controller_type == "IK":
+        controller_config = load_controller_config(default_controller="IK_POSE")
+        controller_config['kp'] = 100
+    else:
+        raise NotImplementedError
+
 
 
 

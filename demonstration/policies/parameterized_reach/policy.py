@@ -6,7 +6,7 @@ import robosuite.utils.transform_utils as T
 
 from env.parameterized_reach import ParameterizedReachEnv
 
-class DemonstrationPolicy:
+class ParameterizedReachDemonstrationPolicy:
     """
     Demonstration policy for the ParameterizedReachEnv with IK control.
     """
@@ -42,7 +42,7 @@ class DemonstrationPolicy:
 if __name__ == '__main__':
     env = ParameterizedReachEnv()
 
-    demonstration_policy = DemonstrationPolicy()
+    demonstration_policy = ParameterizedReachDemonstrationPolicy()
 
     action = np.random.uniform(low=env.action_spec[0], high=env.action_spec[1])
     obs, _, done, _ = env.step(action)

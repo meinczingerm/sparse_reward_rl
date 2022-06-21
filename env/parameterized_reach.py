@@ -7,12 +7,14 @@ from collections import OrderedDict
 import numpy as np
 import robosuite.utils.transform_utils as T
 from gym.vector.utils import spaces
+from mujoco_py import MjRenderContextOffscreen
 from robosuite import load_controller_config
 from robosuite.environments.manipulation.single_arm_env import SingleArmEnv
 from robosuite.environments.manipulation.two_arm_env import TwoArmEnv
 from robosuite.models.arenas import TableArena, EmptyArena
 from robosuite.models.objects import MujocoXMLObject, CapsuleObject, BallObject
 from robosuite.models.tasks import ManipulationTask
+from robosuite.renderers.mujoco.mujoco_py_renderer import MujocoPyRenderer
 from robosuite.utils.mjcf_utils import CustomMaterial
 from robosuite.utils.observables import Observable, sensor
 from robosuite.utils.placement_samplers import UniformRandomSampler
@@ -24,7 +26,6 @@ class ParameterizedReachEnv(SingleArmEnv):
     """
     Parameterized reach env from https://arxiv.org/pdf/2112.00597.pdf.
     """
-
     def __init__(
         self,
         number_of_waypoints=2,
@@ -52,6 +53,7 @@ class ParameterizedReachEnv(SingleArmEnv):
         renderer="mujoco",
         renderer_config=None,
     ):
+        self.name = f"ParameterizedReach_{number_of_waypoints}Waypoint"
 
         self.use_engineered_observation_encoding = use_engineered_observation_encoding
         self.number_of_waypoints = number_of_waypoints  # including the final goal pose
@@ -63,6 +65,13 @@ class ParameterizedReachEnv(SingleArmEnv):
         controller_configs = load_controller_config(default_controller="IK_POSE")
         controller_configs['kp'] = 100
 
+        # this is a hotfix based on the discussion  https://github.com/ARISE-Initiative/robosuite/issues/114
+        assert not (has_renderer and has_offscreen_renderer)
+        self._offscreen_renderer = has_offscreen_renderer
+        if has_offscreen_renderer:
+            from mujoco_py import GlfwContext
+            GlfwContext(offscreen=True)
+
         super().__init__(
             robots=robots,
             env_configuration=env_configuration,
@@ -72,7 +81,7 @@ class ParameterizedReachEnv(SingleArmEnv):
             initialization_noise=initialization_noise,
             use_camera_obs=use_camera_obs,
             has_renderer=has_renderer,
-            has_offscreen_renderer=has_offscreen_renderer,
+            has_offscreen_renderer=False,
             render_camera=render_camera,
             render_collision_mesh=render_collision_mesh,
             render_visual_mesh=render_visual_mesh,
@@ -117,6 +126,23 @@ class ParameterizedReachEnv(SingleArmEnv):
         self.metadata = None
         self.spec = None
 
+    def _reset_internal(self):
+        """Resets simulation internal configurations."""
+        if self._offscreen_renderer:
+            if self.sim._render_context_offscreen is None:
+                render_context = MjRenderContextOffscreen(self.sim, device_id=self.render_gpu_device_id)
+                self.sim.add_render_context(render_context)
+            self.sim._render_context_offscreen.vopt.geomgroup[0] = 1 if self.render_collision_mesh else 0
+            self.sim._render_context_offscreen.vopt.geomgroup[1] = 1 if self.render_visual_mesh else 0
+
+        super(ParameterizedReachEnv, self)._reset_internal()
+
+    def render(self, mode='human'):
+        if mode == 'rgb':
+            picture = self.sim.render(camera_name='frontview', width=500, height=500)
+            return np.flip(picture, axis=0)
+        else:
+            return super(ParameterizedReachEnv, self).render(mode)
 
     # Quickfix for issue: https://github.com/ARISE-Initiative/robosuite/issues/321
     @property
@@ -172,7 +198,7 @@ class ParameterizedReachEnv(SingleArmEnv):
         pos_dist = np.linalg.norm(gripper_pos - desired_pos)
         axis_angle_dist = np.linalg.norm(gripper_axis_angle - desired_axis_angle)
 
-        return pos_dist < 0.005 and axis_angle_dist < 0.01
+        return pos_dist < 0.05 and axis_angle_dist < 0.2
 
     def _check_success(self):
         """
@@ -223,7 +249,7 @@ class ParameterizedReachEnv(SingleArmEnv):
         capsules = []
         for i, _goal_pose in enumerate(self.goal_poses):
             capsule = CapsuleObject(f"goal_{i}", size=np.array([0.01, 0.02]), joints=None, obj_type="visual",
-                                    rgba=[0, 1, 0, i / self.number_of_waypoints])
+                                    rgba=[0, 1, 0, i+1 / self.number_of_waypoints+1])
             goal_quat = T.axisangle2quat(_goal_pose[3:])
             capsule._obj.attrib["quat"] = f"{goal_quat[3]} {goal_quat[0]} {goal_quat[1]} {goal_quat[2]}"
             capsule._obj.attrib["pos"] = f"{_goal_pose[0]} {_goal_pose[1]} {_goal_pose[2]}"

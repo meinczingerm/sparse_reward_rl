@@ -27,7 +27,7 @@ def save_result_gif(env, model, path, filename, frames_to_save=100):
     frames = []
     for t in range(frames_to_save):
         # Render to frames buffer
-        frames.append(env.render(mode="rgb_array"))
+        frames.append(env.render(mode='rgb'))
         action, _state = model.predict(obs, deterministic=True)
         obs, _, done, _ = env.step(action)
         if done:
@@ -36,11 +36,6 @@ def save_result_gif(env, model, path, filename, frames_to_save=100):
 
 
 def save_frames_as_gif(frames, path='./', filename='gym_animation.gif'):
-    from mujoco_py import GlfwContext
-    GlfwContext(offscreen=True)
-    from matplotlib import animation
-    import matplotlib.pyplot as plt
-
     #Mess with this to change frame size
     plt.figure(figsize=(frames[0].shape[1] / 72.0, frames[0].shape[0] / 72.0), dpi=72)
 

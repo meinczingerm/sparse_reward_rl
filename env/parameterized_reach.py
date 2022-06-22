@@ -54,12 +54,13 @@ class ParameterizedReachEnv(SingleArmEnv):
         renderer_config=None,
     ):
         self.name = f"ParameterizedReach_{number_of_waypoints}Waypoint"
+        self.success_pos_dist_limit = 0.05
+        self.success_angle_dist_limit = 0.02
 
         self.use_engineered_observation_encoding = use_engineered_observation_encoding
         self.number_of_waypoints = number_of_waypoints  # including the final goal pose
         self.idx_of_reached_waypoint = -1  # index for the last waypoint reached
         self.goal_poses = self.get_random_goals()
-        self.placement_initializer = None
 
 
         controller_configs = load_controller_config(default_controller="IK_POSE")
@@ -194,11 +195,14 @@ class ParameterizedReachEnv(SingleArmEnv):
         desired_goal = self._get_desired_goal()
         desired_pos = desired_goal[0:3]
         desired_axis_angle = desired_goal[3:6]
+        return self._check_reached_pose(gripper_pos, desired_pos, gripper_axis_angle, desired_axis_angle)
 
+    def _check_reached_pose(self, gripper_pos, desired_pos, gripper_axis_angle, desired_axis_angle):
         pos_dist = np.linalg.norm(gripper_pos - desired_pos)
         axis_angle_dist = np.linalg.norm(gripper_axis_angle - desired_axis_angle)
 
-        return pos_dist < 0.05 and axis_angle_dist < 0.2
+        return pos_dist < self.success_pos_dist_limit and axis_angle_dist < self.success_angle_dist_limit
+
 
     def _check_success(self):
         """
@@ -225,6 +229,27 @@ class ParameterizedReachEnv(SingleArmEnv):
         else:
             reward = 0
 
+        return reward
+
+    def compute_reward(self, achieved_goal, goal, info):
+        """
+
+        :param achieved_goal: batched
+        :param goal:
+        :param info:
+        :return:
+        """
+        # Compute distance between goal and the achieved goal.
+
+        # Sparse reward
+        achieved_pos = achieved_goal[:, :3]
+        achieved_axis_angle = achieved_goal[:, 3:]
+        goal_pos = goal[:, :3]
+        goal_axis_angle = goal[:, 3:]
+        pos_dist = np.linalg.norm(achieved_pos - goal_pos, axis=1)
+        axis_angle_dist = np.linalg.norm(achieved_axis_angle - goal_axis_angle, axis=1)
+        reward = np.logical_and((pos_dist < self.success_pos_dist_limit),
+                                (axis_angle_dist < self.success_angle_dist_limit)).astype(float)
         return reward
 
     def reset(self):

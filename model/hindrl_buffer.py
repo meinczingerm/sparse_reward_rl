@@ -54,7 +54,7 @@ class HinDRLReplayBuffer(HerReplayBuffer):
 class HinDRLTQC(TQC):
     def __init__(self, replay_buffer: HinDRLReplayBuffer, **kwargs):
 
-        self.replay_buffer = replay_buffer
         super(HinDRLTQC, self).__init__(**kwargs)
+        self.replay_buffer = replay_buffer
 
 

@@ -5,6 +5,7 @@ from sb3_contrib import TQC
 from sb3_contrib.common.wrappers import TimeFeatureWrapper
 from stable_baselines3.common.callbacks import EvalCallback, CallbackList
 from stable_baselines3.common.env_util import make_vec_env
+from stable_baselines3.common.monitor import Monitor
 
 from demonstration.collect import collect_demonstrations
 from demonstration.policies.parameterized_reach.policy import ParameterizedReachDemonstrationPolicy
@@ -24,7 +25,7 @@ config = {
             "learning_rate": float(1e-3),
             "tau": 0.05,
             "verbose": 1,
-            "learning_starts": 10000,
+            "learning_starts": 200,
             "policy_kwargs": {"net_arch": [512, 512, 512], "n_critics": 2},
         },
     "env": {"horizon": 200}
@@ -41,7 +42,8 @@ def _setup_training(demonstration_hdf5, config):
     save_dict(config, os.path.join(log_dir, 'config.json'))
 
     replay_buffer = HerReplayBufferWithDemonstrationGoals(demonstration_hdf5, env,
-                                                          max_episode_length=config['env']["horizon"])
+                                                          max_episode_length=config['env']["horizon"],
+                                                          device="cuda")
     print("Env ready")
     model = HinDRLTQC(replay_buffer, **config['model_config'])
     return env, model, log_dir
@@ -63,12 +65,12 @@ def train(_config):
     eval_env_config = _config['env']
     eval_env_config['has_renderer'] = False
     eval_env_config['has_offscreen_renderer'] = True
-    eval_env = ParameterizedReachEnv(**eval_env_config)
+    eval_env = Monitor(ParameterizedReachEnv(**eval_env_config))
     # Use deterministic actions for evaluation
     eval_path = os.path.join(log_dir, 'train_eval')
 
     video_callback = EvalVideoCallback(eval_env, best_model_save_path=eval_path,
-                                       log_path=eval_path, eval_freq=100,
+                                       log_path=eval_path, eval_freq=10000,
                                        deterministic=True, render=False)
     eval_callback = EvalCallback(eval_env, best_model_save_path=eval_path,
                                  log_path=eval_path, eval_freq=1000, n_eval_episodes=10, deterministic=True,

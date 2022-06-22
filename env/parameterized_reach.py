@@ -103,10 +103,10 @@ class ParameterizedReachEnv(SingleArmEnv):
                                        dtype="float32")
 
         low_limit = [-2, -2, -2, -2 * np.pi, -2 * np.pi, -2 * np.pi]
-        low_limit.extend([0] * self.number_of_waypoints)
+        # low_limit.extend([0] * self.number_of_waypoints)
         low_limit = np.array(low_limit)
         high_limit = [2, 2, 2, 2 * np.pi, 2 * np.pi, 2 * np.pi]
-        high_limit.extend([1] * self.number_of_waypoints)
+        # high_limit.extend([1] * self.number_of_waypoints)
         high_limit = np.array(high_limit)
 
         self.observation_space = spaces.Dict(

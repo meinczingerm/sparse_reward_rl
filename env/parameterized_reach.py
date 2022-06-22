@@ -156,7 +156,7 @@ class ParameterizedReachEnv(SingleArmEnv):
         desired_pose = self.goal_poses[self.idx_of_reached_waypoint + 1]
         desired_mask = np.zeros(self.number_of_waypoints)
         desired_mask[:self.idx_of_reached_waypoint + 2] = 1
-        return np.hstack([desired_pose, desired_mask])
+        return np.hstack([desired_pose])
 
     def _get_engineered_encoding(self):
         """
@@ -170,7 +170,7 @@ class ParameterizedReachEnv(SingleArmEnv):
         gripper_axis_angle = T.quat2axisangle(self._eef_xquat)
         progress_mask = np.zeros(self.number_of_waypoints)
         progress_mask[:self.idx_of_reached_waypoint + 1] = 1
-        return np.hstack([gripper_pos, gripper_axis_angle, progress_mask])
+        return np.hstack([gripper_pos, gripper_axis_angle])
 
     def get_random_goals(self):
         random_positions = [np.random.uniform(low=np.array([0.4, -0.3, 0]), high=np.array([0.6, 0.3, 0.4]))

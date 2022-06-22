@@ -1,5 +1,6 @@
 import os.path
 import warnings
+from abc import abstractmethod
 from collections import OrderedDict
 
 import numpy as np
@@ -14,7 +15,7 @@ from robosuite.utils.observables import Observable, sensor
 from utils import get_project_root_path
 
 
-class CableInsertionEnv(TwoArmEnv):
+class CableManipulationBase(TwoArmEnv):
     """
     This class corresponds to the lifting task for two robot arms.
 
@@ -169,10 +170,6 @@ class CableInsertionEnv(TwoArmEnv):
         table_full_size=(1.5, 2, 0.05),
         table_friction=(1.0, 5e-3, 1e-4),
         use_camera_obs=True,
-        use_object_obs=True,
-        reward_scale=1.0,
-        reward_shaping=False,
-        placement_initializer=None,
         has_renderer=False,
         has_offscreen_renderer=True,
         render_camera="frontview",
@@ -201,16 +198,6 @@ class CableInsertionEnv(TwoArmEnv):
         self.table_full_size = table_full_size
         self.table_friction = table_friction
         self.table_offset = np.array((0, 0, 0.9))
-
-        # reward configuration
-        self.reward_scale = reward_scale
-        self.reward_shaping = reward_shaping
-
-        # whether to use ground-truth object states
-        self.use_object_obs = use_object_obs
-
-        # object placement initializer
-        self.placement_initializer = placement_initializer
 
         super().__init__(
             robots=robots,
@@ -246,29 +233,34 @@ class CableInsertionEnv(TwoArmEnv):
                                                  self.robots[1].controller.input_max]), dtype="float32")
 
         warnings.warn("Observation space uses unlimited box. Should be updated.")
-        if self.use_desired_goal:
-            self.observation_space = spaces.Dict(
-                dict(observation=spaces.Box(
-                        -np.inf, np.inf, shape=(7,), dtype="float32"
-                    ),
-                    desired_goal=spaces.Box(
-                        -np.inf, np.inf, shape=(7,), dtype="float32"
-                    ),
-                    achieved_goal=spaces.Box(
-                        -np.inf, np.inf, shape=(7,), dtype="float32"
-                    )
-                )
-            )
-        else:
-            self.observation_space = spaces.Dict(
-                dict(observation=spaces.Box(
-                        -np.inf, np.inf, shape=(7,), dtype="float32"
-                    )
-                )
-            )
+        self.observation_space = self._get_observation_space()
 
         self.metadata = None
         self.spec = None
+
+    @abstractmethod
+    def _get_observation_space(self):
+        """
+        Returns observation space as spaces dict usually with keys=["observation", "achieved_goal", "desired_goal"]
+        :return: observation space for the env defined as spaces.Dict({"key": spaces.box})
+        """
+        raise NotImplementedError
+
+    @abstractmethod
+    def _get_engineered_encoding(self):
+        """
+        Calculates the heuristically engineered encoding of states.
+        :return: encoding (flattened np.array)
+        """
+        raise NotImplementedError
+
+    @abstractmethod
+    def _check_success(self):
+        """
+        Checks succes of current state.
+        :return: True if current state is succesful, False otherwise
+        """
+        raise NotImplementedError
 
     def reward(self, action=None):
         """
@@ -281,14 +273,14 @@ class CableInsertionEnv(TwoArmEnv):
             float: reward value
         """
         if self._check_success():
-            reward = 5000
+            reward = 1
         else:
-            reward = -1
+            reward = 0
 
         return reward
 
     def reset(self):
-        obs = super(CableInsertionEnv, self).reset()
+        obs = super(CableManipulationBase, self).reset()
         if self.get_desired_goal_fn is not None:
             self.desired_goal = self.get_desired_goal_fn()
             assert self.desired_goal.shape == self.observation_space["desired_goal"].shape
@@ -297,7 +289,6 @@ class CableInsertionEnv(TwoArmEnv):
             assert self.get_desired_goal_fn is not None
 
         return obs
-
 
     def _load_model(self):
         """
@@ -391,42 +382,7 @@ class CableInsertionEnv(TwoArmEnv):
 
         @sensor(modality=modality)
         def engineered_encoding(obs_cache):
-            # Important data
-            robot0_gripper_pos = self._eef0_xpos
-            robot1_gripper_pos = self._eef1_xpos
-
-            mother_grip_id = self.sim.model.site_name2id(self._important_sites["mother_grip"])
-            mother_grip_pos = np.array(self.sim.data.site_xpos[mother_grip_id])
-            mother_grip_mat = np.array(self.sim.data.site_xmat[mother_grip_id]).reshape([3, 3])
-            father_grip_id = self.sim.model.site_name2id(self._important_sites["father_grip"])
-            father_grip_pos = np.array(self.sim.data.site_xpos[father_grip_id])
-            father_grip_mat = np.array(self.sim.data.site_xmat[father_grip_id]).reshape([3, 3])
-
-            mother_tip_id = self.sim.model.site_name2id(self._important_sites["mother_tip"])
-            mother_tip_pos = np.array(self.sim.data.site_xpos[mother_tip_id])
-            father_tip_id = self.sim.model.site_name2id(self._important_sites["father_tip"])
-            father_tip_pos = np.array(self.sim.data.site_xpos[father_tip_id])
-            mother_inner_tip_id = self.sim.model.site_name2id(self._important_sites["mother_inner_tip"])
-            mother_inner_tip = np.array(self.sim.data.site_xpos[mother_inner_tip_id])
-
-            # Calculate encoding based on the HinDRL article (https://arxiv.org/pdf/2112.00597.pdf)
-            distance_to_mother_grip = np.linalg.norm(robot0_gripper_pos - mother_grip_pos)
-            distance_to_father_grip = np.linalg.norm(robot1_gripper_pos - father_grip_pos)
-            distance_between_cable_tips = np.linalg.norm(father_tip_pos - mother_tip_pos)
-            grasp_mother = self._check_grasp(self.robots[0].gripper, "cable_stand_mother_contact")
-            grasp_father = self._check_grasp(self.robots[1].gripper, "cable_stand_father_contact")
-
-            # y and z axis is mixed in the respective mujoco sites,
-            #  so we are calculating the dot product between the y axis
-            cable_z_product = np.dot(mother_grip_mat @ np.array([[0], [1], [0]]).squeeze(),
-                                     father_grip_mat @ np.array([[0], [1], [0]]).squeeze())
-
-            z_mother = mother_grip_mat @ np.array([[0], [1], [0]]).squeeze()
-            socket_distance_vector = father_tip_pos - mother_inner_tip
-            z_distance_to_socket = np.dot(z_mother, socket_distance_vector)
-
-            encoding = np.hstack([distance_to_mother_grip, distance_to_father_grip, distance_between_cable_tips,
-                                  grasp_mother, grasp_father, cable_z_product, z_distance_to_socket])
+            encoding = self._get_engineered_encoding()
             return encoding
 
         @sensor(modality=modality)
@@ -454,28 +410,6 @@ class CableInsertionEnv(TwoArmEnv):
             )
 
         return observables
-
-    def _check_success(self):
-        """
-        Check if cable is succesfully inserted.
-        """
-        father_tip_id = self.sim.model.site_name2id(self._important_sites["father_tip"])
-        father_tip_pos = np.array(self.sim.data.site_xpos[father_tip_id])
-        father_tip_ori = self.sim.data.site_xmat[father_tip_id].reshape([3, 3])
-        father_tip_z_ori = np.matmul(father_tip_ori, np.array([[0], [1], [0]])) # Z and Y axis is changed in the xml site
-
-        mother_tip_id = self.sim.model.site_name2id(self._important_sites["mother_tip"])
-        mother_tip_pos = np.array(self.sim.data.site_xpos[mother_tip_id])
-        mother_tip_ori = self.sim.data.site_xmat[mother_tip_id].reshape([3, 3])
-        mother_tip_z_ori = np.matmul(mother_tip_ori, np.array([[0], [1], [0]])) # Z and Y axis is changed in the xml site
-
-
-        pos_error = np.linalg.norm(father_tip_pos-mother_tip_pos, 2)
-        ori_error = np.linalg.norm(mother_tip_z_ori + father_tip_z_ori) # the two z direction has to be oppsite
-        if pos_error < 0.003 and ori_error < 0.03:
-            return True
-        else:
-            return False
 
     def _post_action(self, action):
         """

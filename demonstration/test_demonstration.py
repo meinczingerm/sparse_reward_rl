@@ -2,7 +2,7 @@ import h5py
 import numpy as np
 from robosuite import load_controller_config
 
-from env.cable_insertion_env import CableInsertionEnv
+from env.cable_manipulation_base import CableManipulationBase
 
 
 class ReplayedJointVelPolicy:
@@ -57,18 +57,18 @@ def test_ik_replay(hdf5_file="/home/mark/tum/2022ss/thesis/master_thesis/demonst
     controller_config = load_controller_config(default_controller="IK_POSE")
     controller_config['kp'] = 100
 
-    env = CableInsertionEnv(robots=["Panda", "Panda"],  # load a Sawyer robot and a Panda robot
-                            gripper_types="default",  # use default grippers per robot arm
-                            controller_configs=controller_config,  # each arm is controlled using OSC
-                            env_configuration="single-arm-parallel",
-                            render_camera=None,# (two-arm envs only) arms face each other
-                            has_renderer=True,  # no on-screen rendering
-                            has_offscreen_renderer=False,  # no off-screen rendering
-                            control_freq=20,  # 20 hz control for applied actions
-                            horizon=1000,  # each episode terminates after 200 steps
-                            use_object_obs=True,  # provide object observations to agent
-                            use_camera_obs=False,  # don't provide image observations to agent
-                            reward_shaping=True)  # use a dense reward signal for learning)
+    env = CableManipulationBase(robots=["Panda", "Panda"],  # load a Sawyer robot and a Panda robot
+                                gripper_types="default",  # use default grippers per robot arm
+                                controller_configs=controller_config,  # each arm is controlled using OSC
+                                env_configuration="single-arm-parallel",
+                                render_camera=None,  # (two-arm envs only) arms face each other
+                                has_renderer=True,  # no on-screen rendering
+                                has_offscreen_renderer=False,  # no off-screen rendering
+                                control_freq=20,  # 20 hz control for applied actions
+                                horizon=1000,  # each episode terminates after 200 steps
+                                use_object_obs=True,  # provide object observations to agent
+                                use_camera_obs=False,  # don't provide image observations to agent
+                                reward_shaping=True)  # use a dense reward signal for learning)
 
     demonstration_policy = ReplayedActionPolicy(hdf5_file)
 
@@ -90,18 +90,18 @@ def test_osc_replay(hdf5_file="/home/mark/tum/2022ss/thesis/master_thesis/demons
     controller_config['control_delta'] = False
     controller_config['kp'] = 150
 
-    env = CableInsertionEnv(robots=["Panda", "Panda"],  # load a Sawyer robot and a Panda robot
-                            gripper_types="default",  # use default grippers per robot arm
-                            controller_configs=controller_config,  # each arm is controlled using OSC
-                            env_configuration="single-arm-parallel",
-                            render_camera=None,# (two-arm envs only) arms face each other
-                            has_renderer=True,  # no on-screen rendering
-                            has_offscreen_renderer=False,  # no off-screen rendering
-                            control_freq=20,  # 20 hz control for applied actions
-                            horizon=1000,  # each episode terminates after 200 steps
-                            use_object_obs=True,  # provide object observations to agent
-                            use_camera_obs=False,  # don't provide image observations to agent
-                            reward_shaping=True)  # use a dense reward signal for learning)
+    env = CableManipulationBase(robots=["Panda", "Panda"],  # load a Sawyer robot and a Panda robot
+                                gripper_types="default",  # use default grippers per robot arm
+                                controller_configs=controller_config,  # each arm is controlled using OSC
+                                env_configuration="single-arm-parallel",
+                                render_camera=None,  # (two-arm envs only) arms face each other
+                                has_renderer=True,  # no on-screen rendering
+                                has_offscreen_renderer=False,  # no off-screen rendering
+                                control_freq=20,  # 20 hz control for applied actions
+                                horizon=1000,  # each episode terminates after 200 steps
+                                use_object_obs=True,  # provide object observations to agent
+                                use_camera_obs=False,  # don't provide image observations to agent
+                                reward_shaping=True)  # use a dense reward signal for learning)
 
     demonstration_policy = ReplayedActionPolicy(hdf5_file)
 
@@ -125,18 +125,18 @@ def test_torque_replay(hdf5_file="/home/mark/tum/2022ss/thesis/master_thesis/dem
     controller_config['output_max'] = 80
     controller_config['output_min'] = -80
 
-    env = CableInsertionEnv(robots=["Panda", "Panda"],  # load a Sawyer robot and a Panda robot
-                            gripper_types="default",  # use default grippers per robot arm
-                            controller_configs=controller_config,  # each arm is controlled using OSC
-                            env_configuration="single-arm-parallel",
-                            render_camera=None,# (two-arm envs only) arms face each other
-                            has_renderer=True,  # no on-screen rendering
-                            has_offscreen_renderer=False,  # no off-screen rendering
-                            control_freq=20,  # 20 hz control for applied actions
-                            horizon=1000,  # each episode terminates after 200 steps
-                            use_object_obs=True,  # provide object observations to agent
-                            use_camera_obs=False,  # don't provide image observations to agent
-                            reward_shaping=True)  # use a dense reward signal for learning)
+    env = CableManipulationBase(robots=["Panda", "Panda"],  # load a Sawyer robot and a Panda robot
+                                gripper_types="default",  # use default grippers per robot arm
+                                controller_configs=controller_config,  # each arm is controlled using OSC
+                                env_configuration="single-arm-parallel",
+                                render_camera=None,  # (two-arm envs only) arms face each other
+                                has_renderer=True,  # no on-screen rendering
+                                has_offscreen_renderer=False,  # no off-screen rendering
+                                control_freq=20,  # 20 hz control for applied actions
+                                horizon=1000,  # each episode terminates after 200 steps
+                                use_object_obs=True,  # provide object observations to agent
+                                use_camera_obs=False,  # don't provide image observations to agent
+                                reward_shaping=True)  # use a dense reward signal for learning)
 
     demonstration_policy = ReplayedTorquePolicy(hdf5_file)
 
@@ -157,18 +157,18 @@ def test_joint_vel_replay(hdf5_file="/home/mark/tum/2022ss/thesis/master_thesis/
     controller_config["output_max"] = 1
     controller_config["output_min"] = -1
 
-    env = CableInsertionEnv(robots=["Panda", "Panda"],  # load a Sawyer robot and a Panda robot
-                            gripper_types="default",  # use default grippers per robot arm
-                            controller_configs=controller_config,  # each arm is controlled using OSC
-                            env_configuration="single-arm-parallel",
-                            render_camera=None,# (two-arm envs only) arms face each other
-                            has_renderer=True,  # no on-screen rendering
-                            has_offscreen_renderer=False,  # no off-screen rendering
-                            control_freq=20,  # 20 hz control for applied actions
-                            horizon=1000,  # each episode terminates after 200 steps
-                            use_object_obs=True,  # provide object observations to agent
-                            use_camera_obs=False,  # don't provide image observations to agent
-                            reward_shaping=True)  # use a dense reward signal for learning)
+    env = CableManipulationBase(robots=["Panda", "Panda"],  # load a Sawyer robot and a Panda robot
+                                gripper_types="default",  # use default grippers per robot arm
+                                controller_configs=controller_config,  # each arm is controlled using OSC
+                                env_configuration="single-arm-parallel",
+                                render_camera=None,  # (two-arm envs only) arms face each other
+                                has_renderer=True,  # no on-screen rendering
+                                has_offscreen_renderer=False,  # no off-screen rendering
+                                control_freq=20,  # 20 hz control for applied actions
+                                horizon=1000,  # each episode terminates after 200 steps
+                                use_object_obs=True,  # provide object observations to agent
+                                use_camera_obs=False,  # don't provide image observations to agent
+                                reward_shaping=True)  # use a dense reward signal for learning)
 
     demonstration_policy = ReplayedJointVelPolicy(hdf5_file)
 

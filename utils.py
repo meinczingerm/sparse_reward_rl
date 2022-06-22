@@ -1,9 +1,12 @@
 import os
 
 import gym
+from robosuite import load_controller_config
 from sb3_contrib import TQC
 from sb3_contrib.common.wrappers import TimeFeatureWrapper
 
+from matplotlib import animation
+import matplotlib.pyplot as plt
 from stable_baselines3 import *
 from stable_baselines3.common.env_util import make_vec_env
 
@@ -24,7 +27,7 @@ def save_result_gif(env, model, path, filename, frames_to_save=100):
     frames = []
     for t in range(frames_to_save):
         # Render to frames buffer
-        frames.append(env.render(mode="rgb_array"))
+        frames.append(env.render(mode='rgb'))
         action, _state = model.predict(obs, deterministic=True)
         obs, _, done, _ = env.step(action)
         if done:
@@ -33,11 +36,6 @@ def save_result_gif(env, model, path, filename, frames_to_save=100):
 
 
 def save_frames_as_gif(frames, path='./', filename='gym_animation.gif'):
-    from mujoco_py import GlfwContext
-    GlfwContext(offscreen=True)
-    from matplotlib import animation
-    import matplotlib.pyplot as plt
-
     #Mess with this to change frame size
     plt.figure(figsize=(frames[0].shape[1] / 72.0, frames[0].shape[0] / 72.0), dpi=72)
 
@@ -117,6 +115,15 @@ def setup_training(config):
     print("env ready")
     model = get_baseline_model_with_name(config["model"]["name"], config["model"]["kwargs"], env=env)
     return env, model, log_dir
+
+
+def get_controller_config(controller_type="IK"):
+    if controller_type == "IK":
+        controller_config = load_controller_config(default_controller="IK_POSE")
+        controller_config['kp'] = 100
+    else:
+        raise NotImplementedError
+
 
 
 

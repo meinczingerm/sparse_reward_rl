@@ -136,7 +136,7 @@ class IKDemonstrationPolicy:
         self.check_current_stage(observation, 0)
         target = self.robot_stages[0].target
         if target.type == "rel":
-            target_pos = observation[target.relative_to] + target.target_pos
+            target_pos = observation[target.relative] + target.target_pos
         else:
             target_pos = target.target_pos
         target_quat = target.target_quat
@@ -152,7 +152,7 @@ class IKDemonstrationPolicy:
         self.check_current_stage(observation, 1)
         target = self.robot_stages[1].target
         if target.type == "rel":
-            target_pos = observation[target.relative_to] + target.target_pos
+            target_pos = observation[target.relative] + target.target_pos
         else:
             target_pos = target.target_pos
         target_quat = target.target_quat
@@ -209,7 +209,7 @@ class IKDemonstrationPolicy:
 
             _done = (pos_done and ori_done)
         else:
-            target_pos = observation[target.relative_to] + target.target_pos
+            target_pos = observation[target.relative] + target.target_pos
             pos_done = np.allclose(target_pos, observation[f'robot{robot_idx}_eef_pos'], atol=1e-3, rtol=0)
             ori_done = np.allclose(target.target_quat, observation[f'robot{robot_idx}_eef_quat'], atol=1e-2, rtol=0)
             _done = (pos_done and ori_done)
@@ -249,19 +249,7 @@ class IKDemonstrationPolicy:
 
 
 if __name__ == '__main__':
-    controller_config = load_controller_config(default_controller="IK_POSE")
-    controller_config['kp'] = 100
-
-    env = CableInsertionEnv(robots=["Panda", "Panda"],  # load a Sawyer robot and a Panda robot
-                            gripper_types="default",  # use default grippers per robot arm
-                            controller_configs=controller_config,  # each arm is controlled using OSC
-                            env_configuration="single-arm-parallel",
-                            render_camera=None,
-                            has_renderer=True,
-                            has_offscreen_renderer=False,
-                            control_freq=20,
-                            horizon=10000,
-                            use_camera_obs=False)
+    env = CableInsertionEnv(has_renderer=True)
 
     demonstration_policy = IKDemonstrationPolicy()
 

@@ -1,5 +1,5 @@
 """
-A script for collecting demonstrations as .hdf5 using the demonstration/policy.py as a policy.
+A script for collecting demonstrations as .hdf5 using the demonstration/bring_near_policy.py as a policy.
 The .hdf5 file can not be played back the standard way with DemoPlaybackCameraMover, because the
 env is not part of robosuite.
 """

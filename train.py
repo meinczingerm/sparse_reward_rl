@@ -29,13 +29,15 @@ config = {
             "learning_starts": 200,
             "policy_kwargs": {"net_arch": [512, 512, 512], "n_critics": 2},
         },
-    "env": {"horizon": 200}
+    "env_class": ParameterizedReachEnv,
+    "env_kwargs": {"horizon": 200},
+    "demonstration_policy": ParameterizedReachDemonstrationPolicy()
 }
 
 
 def _setup_training(demonstration_hdf5, config):
     print("Creating env...")
-    env = make_vec_env(ParameterizedReachEnv, env_kwargs=config['env'])
+    env = make_vec_env(config['env_class'], env_kwargs=config['env_kwargs'])
 
     config['model_config']["env"] = env
     log_dir = create_log_dir(env.envs[0].name)
@@ -44,30 +46,27 @@ def _setup_training(demonstration_hdf5, config):
 
     warnings.warn("This is HNDRL now. Train with the other !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!")
     replay_buffer = HinDRLReplayBuffer(demonstration_hdf5, env,
-                                       max_episode_length=config['env']["horizon"],
+                                       max_episode_length=config['env_kwargs']["horizon"],
                                        device="cuda")
     print("Env ready")
     model = HinDRLTQC(replay_buffer, **config['model_config'])
     return env, model, log_dir
 
 
-def _collect_demonstration():
-    env = ParameterizedReachEnv()
+def _collect_demonstration(env, demonstration_policy):
     env_config = {
         'env_name': env.name
     }
-
-    demonstration_policy = ParameterizedReachDemonstrationPolicy()
     collect_demonstrations(env, env_config=env_config, demonstration_policy=demonstration_policy, episode_num=10)
 
 
 def train(_config):
     env, model, log_dir = _setup_training(_config["demonstration_hdf5"], _config)
 
-    eval_env_config = _config['env']
+    eval_env_config = _config['env_kwargs']
     eval_env_config['has_renderer'] = False
     eval_env_config['has_offscreen_renderer'] = True
-    eval_env = Monitor(ParameterizedReachEnv(**eval_env_config))
+    eval_env = Monitor(_config['env_class'](**eval_env_config))
     # Use deterministic actions for evaluation
     eval_path = os.path.join(log_dir, 'train_eval')
 

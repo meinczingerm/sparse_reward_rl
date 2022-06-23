@@ -6,6 +6,8 @@ from collections import OrderedDict
 import numpy as np
 import robosuite.utils.transform_utils as T
 from gym.vector.utils import spaces
+from mujoco_py import MjRenderContextOffscreen
+from robosuite import load_controller_config
 from robosuite.environments.manipulation.two_arm_env import TwoArmEnv
 from robosuite.models.arenas import TableArena
 from robosuite.models.objects import MujocoXMLObject
@@ -159,19 +161,18 @@ class CableManipulationBase(TwoArmEnv):
 
     def __init__(
         self,
-        robots,
+        robots=["Panda", "Panda"],
         use_engineered_observation_encoding=True,  # special for HinDRL
         use_desired_goal=False,  # special for HinDRL
         get_desired_goal_fn=None,  # special for HinDRL
-        env_configuration="default",
-        controller_configs=None,
+        env_configuration="single-arm-parallel",
         gripper_types="default",
         initialization_noise="default",
         table_full_size=(1.5, 2, 0.05),
         table_friction=(1.0, 5e-3, 1e-4),
-        use_camera_obs=True,
+        use_camera_obs=False,
         has_renderer=False,
-        has_offscreen_renderer=True,
+        has_offscreen_renderer=False,
         render_camera="frontview",
         render_collision_mesh=False,
         render_visual_mesh=True,
@@ -199,6 +200,16 @@ class CableManipulationBase(TwoArmEnv):
         self.table_friction = table_friction
         self.table_offset = np.array((0, 0, 0.9))
 
+
+        # this is a hotfix based on the discussion  https://github.com/ARISE-Initiative/robosuite/issues/114
+        assert not (has_renderer and has_offscreen_renderer)
+        self._offscreen_renderer = has_offscreen_renderer
+        if has_offscreen_renderer:
+            from mujoco_py import GlfwContext
+            GlfwContext(offscreen=True)
+
+        controller_configs = load_controller_config(default_controller="IK_POSE")
+        controller_configs['kp'] = 100
         super().__init__(
             robots=robots,
             env_configuration=env_configuration,
@@ -239,6 +250,17 @@ class CableManipulationBase(TwoArmEnv):
         self.spec = None
 
     @abstractmethod
+    def compute_reward(self, achieved_goal, goal, info):
+        """
+        Calculates the reward given the achieved_goal and goal. It is used by HER for relabeling.
+        :param achieved_goal: batched
+        :param goal:
+        :param info:
+        :return:
+        """
+        raise NotImplementedError
+
+    @abstractmethod
     def _get_observation_space(self):
         """
         Returns observation space as spaces dict usually with keys=["observation", "achieved_goal", "desired_goal"]
@@ -252,6 +274,7 @@ class CableManipulationBase(TwoArmEnv):
         Calculates the heuristically engineered encoding of states.
         :return: encoding (flattened np.array)
         """
+
         raise NotImplementedError
 
     @abstractmethod
@@ -289,6 +312,17 @@ class CableManipulationBase(TwoArmEnv):
             assert self.get_desired_goal_fn is not None
 
         return obs
+
+    def _reset_internal(self):
+        """Resets simulation internal configurations."""
+        if self._offscreen_renderer:
+            if self.sim._render_context_offscreen is None:
+                render_context = MjRenderContextOffscreen(self.sim, device_id=self.render_gpu_device_id)
+                self.sim.add_render_context(render_context)
+            self.sim._render_context_offscreen.vopt.geomgroup[0] = 1 if self.render_collision_mesh else 0
+            self.sim._render_context_offscreen.vopt.geomgroup[1] = 1 if self.render_visual_mesh else 0
+
+        super(CableManipulationBase, self)._reset_internal()
 
     def _load_model(self):
         """
@@ -371,6 +405,11 @@ class CableManipulationBase(TwoArmEnv):
             return np.array(self.sim.data.site_xmat[mother_grip_id])
 
         @sensor(modality=modality)
+        def mother_tip_pos(obs_cache):
+            mother_tip_id = self.sim.model.site_name2id(self._important_sites["mother_tip"])
+            return np.array(self.sim.data.site_xpos[mother_tip_id])
+
+        @sensor(modality=modality)
         def father_grip_pos(obs_cache):
             father_grip_id = self.sim.model.site_name2id(self._important_sites["father_grip"])
             return np.array(self.sim.data.site_xpos[father_grip_id])
@@ -379,6 +418,11 @@ class CableManipulationBase(TwoArmEnv):
         def father_grip_mat(obs_cache):
             father_grip_id = self.sim.model.site_name2id(self._important_sites["father_grip"])
             return np.array(self.sim.data.site_xmat[father_grip_id])
+
+        @sensor(modality=modality)
+        def father_tip_pos(obs_cache):
+            father_tip_id = self.sim.model.site_name2id(self._important_sites["father_tip"])
+            return np.array(self.sim.data.site_xpos[father_tip_id])
 
         @sensor(modality=modality)
         def engineered_encoding(obs_cache):
@@ -390,10 +434,10 @@ class CableManipulationBase(TwoArmEnv):
             return self.desired_goal
 
         if self.use_engineered_observation_encoding:
-            sensors = [mother_grip_pos, mother_grip_mat, father_grip_pos, father_grip_mat, engineered_encoding,
-                       engineered_encoding]
-            names = [f"mother_grip_pos", "mother_grip_mat", "father_grip_pos", "father_grip_mat", "observation",
-                     "achieved_goal"]
+            sensors = [mother_grip_pos, mother_grip_mat, mother_tip_pos, father_grip_pos, father_grip_mat,
+                       father_tip_pos, engineered_encoding, engineered_encoding]
+            names = [f"mother_grip_pos", "mother_grip_mat", "mother_tip_pos", "father_grip_pos", "father_grip_mat",
+                     "father_tip_pos", "observation", "achieved_goal"]
         else:
             raise NotImplementedError
 
@@ -425,7 +469,7 @@ class CableManipulationBase(TwoArmEnv):
         reward = self.reward(action)
 
         # done if number of elapsed timesteps is greater than horizon
-        self.done = (self.timestep >= self.horizon) or reward == 5000
+        self.done = (self.timestep >= self.horizon) or self._check_success()
 
         return reward, self.done, {}
 

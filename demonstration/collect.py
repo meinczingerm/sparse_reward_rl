@@ -134,7 +134,7 @@ def gather_demonstrations_as_hdf5(directory, out_dir, env_info):
         # write datasets for states and actions
         ep_data_grp.create_dataset("states", data=np.array(states))
         ep_data_grp.create_dataset("actions", data=np.array(actions))
-        ep_data_grp.create_dataset("engineered_encodings", data=np.array(observation))
+        ep_data_grp.create_dataset("observations", data=np.array(observation))
 
     # write dataset attributes (metadata)
     now = datetime.datetime.now()

@@ -1,4 +1,5 @@
 import os
+import warnings
 
 from robosuite import load_controller_config
 from sb3_contrib import TQC
@@ -16,7 +17,7 @@ from model.hindrl_buffer import HinDRLReplayBuffer, HinDRLTQC, HerReplayBufferWi
 from utils import create_log_dir, save_dict, get_baseline_model_with_name, get_controller_config
 
 config = {
-    "demonstration_hdf5": "/home/mark/tum/2022ss/thesis/master_thesis/demonstration/collection/ParameterizedReach_2Waypoint/1655715484_9130054/demo.hdf5",
+    "demonstration_hdf5": "/home/mark/tum/2022ss/thesis/master_thesis/demonstration/collection/ParameterizedReach_2Waypoint/1655978351_2683008/demo.hdf5",
     "model_config":{
             "policy": "MultiInputPolicy",
             "buffer_size": 1000000,
@@ -41,9 +42,10 @@ def _setup_training(demonstration_hdf5, config):
     config['model_config']['tensorboard_log'] = log_dir
     save_dict(config, os.path.join(log_dir, 'config.json'))
 
-    replay_buffer = HerReplayBufferWithDemonstrationGoals(demonstration_hdf5, env,
-                                                          max_episode_length=config['env']["horizon"],
-                                                          device="cuda")
+    warnings.warn("This is HNDRL now. Train with the other !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!")
+    replay_buffer = HinDRLReplayBuffer(demonstration_hdf5, env,
+                                       max_episode_length=config['env']["horizon"],
+                                       device="cuda")
     print("Env ready")
     model = HinDRLTQC(replay_buffer, **config['model_config'])
     return env, model, log_dir

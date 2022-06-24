@@ -37,7 +37,7 @@ configs = [{
     "env_kwargs": {"horizon": 200},
 },
     {
-    "demonstration_hdf5": "/home/mark/tum/2022ss/thesis/master_thesis/demonstration/collection/BringNear/1655990392_916894/demo.hdf5",
+    "demonstration_hdf5": "/home/mark/tum/2022ss/thesis/master_thesis/demonstration/collection/BringNear/1656018243_408839/demo.hdf5",
     "demonstration_policy": BringNearDemonstrationPolicy(),
     "model_config": {
         "policy": "MultiInputPolicy",
@@ -47,11 +47,11 @@ configs = [{
         "learning_rate": float(1e-3),
         "tau": 0.05,
         "verbose": 1,
-        "learning_starts": 200,
+        "learning_starts": 1000,
         "policy_kwargs": {"net_arch": [512, 512, 512], "n_critics": 2},
     },
     "env_class": BringNearEnv,
-    "env_kwargs": {"horizon": 200,
+    "env_kwargs": {"horizon": 400,
                    "use_desired_goal": True},
 
     }]
@@ -75,11 +75,11 @@ def _setup_training(demonstration_hdf5, config):
     return env, model, log_dir
 
 
-def _collect_demonstration(env, demonstration_policy):
+def _collect_demonstration(env, demonstration_policy, episode_num):
     env_config = {
         'env_name': env.name
     }
-    collect_demonstrations(env, env_config=env_config, demonstration_policy=demonstration_policy, episode_num=10)
+    collect_demonstrations(env, env_config=env_config, demonstration_policy=demonstration_policy, episode_num=episode_num)
 
 
 def train(_config):
@@ -109,6 +109,6 @@ def train(_config):
 
 if __name__ == '__main__':
     config = configs[1]
-    # _collect_demonstration(config["env_class"](), config["demonstration_policy"])
+    # _collect_demonstration(config["env_class"](), config["demonstration_policy"], episode_num=30)
     train(config)
     # run_parallel(_configs=)

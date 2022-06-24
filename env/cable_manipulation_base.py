@@ -324,6 +324,13 @@ class CableManipulationBase(TwoArmEnv):
 
         super(CableManipulationBase, self)._reset_internal()
 
+    def render(self, mode='human'):
+        if mode == 'rgb':
+            picture = self.sim.render(camera_name='frontview', width=500, height=500)
+            return np.flip(picture, axis=0)
+        else:
+            return super(CableManipulationBase, self).render(mode)
+
     def _load_model(self):
         """
         Loading the arena with table, the double-arm robots and the cable stand.

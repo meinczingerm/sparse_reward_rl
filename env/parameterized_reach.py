@@ -19,6 +19,7 @@ from robosuite.utils.mjcf_utils import CustomMaterial
 from robosuite.utils.observables import Observable, sensor
 from robosuite.utils.placement_samplers import UniformRandomSampler
 
+from env.goal_handler import HinDRLGoalHandler
 from utils import get_project_root_path
 
 
@@ -29,6 +30,7 @@ class ParameterizedReachEnv(SingleArmEnv):
     def __init__(
         self,
         number_of_waypoints=2,
+        goal_handler: HinDRLGoalHandler=None,
         robots="Panda",
         use_engineered_observation_encoding=True,  # special for HinDRL
         env_configuration="default",
@@ -54,6 +56,7 @@ class ParameterizedReachEnv(SingleArmEnv):
         renderer_config=None,
     ):
         self.name = f"ParameterizedReach_{number_of_waypoints}Waypoint"
+        self.goal_handler = goal_handler
         self.success_pos_dist_limit = 0.05
         self.success_angle_dist_limit = 0.02
 
@@ -232,25 +235,7 @@ class ParameterizedReachEnv(SingleArmEnv):
         return reward
 
     def compute_reward(self, achieved_goal, goal, info):
-        """
-
-        :param achieved_goal: batched
-        :param goal:
-        :param info:
-        :return:
-        """
-        # Compute distance between goal and the achieved goal.
-
-        # Sparse reward
-        achieved_pos = achieved_goal[:, :3]
-        achieved_axis_angle = achieved_goal[:, 3:]
-        goal_pos = goal[:, :3]
-        goal_axis_angle = goal[:, 3:]
-        pos_dist = np.linalg.norm(achieved_pos - goal_pos, axis=1)
-        axis_angle_dist = np.linalg.norm(achieved_axis_angle - goal_axis_angle, axis=1)
-        reward = np.logical_and((pos_dist < self.success_pos_dist_limit),
-                                (axis_angle_dist < self.success_angle_dist_limit)).astype(float)
-        return reward
+        return self.goal_handler.compute_reward(achieved_goal, goal, info)
 
     def reset(self):
         # get new goals and reset progress

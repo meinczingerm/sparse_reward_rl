@@ -14,6 +14,7 @@ from robosuite.models.objects import MujocoXMLObject
 from robosuite.models.tasks import ManipulationTask
 from robosuite.utils.observables import Observable, sensor
 
+from env.goal_handler import HinDRLGoalHandler
 from utils import get_project_root_path
 
 
@@ -163,8 +164,7 @@ class CableManipulationBase(TwoArmEnv):
         self,
         robots=["Panda", "Panda"],
         use_engineered_observation_encoding=True,  # special for HinDRL
-        use_desired_goal=False,  # special for HinDRL
-        get_desired_goal_fn=None,  # special for HinDRL
+        goal_handler: HinDRLGoalHandler = None,# special for HinDRL
         env_configuration="single-arm-parallel",
         gripper_types="default",
         initialization_noise="default",
@@ -191,8 +191,7 @@ class CableManipulationBase(TwoArmEnv):
     ):
 
         self.use_engineered_observation_encoding = use_engineered_observation_encoding
-        self.use_desired_goal = use_desired_goal
-        self.get_desired_goal_fn = get_desired_goal_fn
+        self.goal_handler = goal_handler
         self.desired_goal = None
 
         # settings for table top
@@ -249,7 +248,6 @@ class CableManipulationBase(TwoArmEnv):
         self.metadata = None
         self.spec = None
 
-    @abstractmethod
     def compute_reward(self, achieved_goal, goal, info):
         """
         Calculates the reward given the achieved_goal and goal. It is used by HER for relabeling.
@@ -258,7 +256,10 @@ class CableManipulationBase(TwoArmEnv):
         :param info:
         :return:
         """
-        raise NotImplementedError
+        if self.goal_handler is not None:
+            self.goal_handler.compute_reward(achieved_goal, goal, info)
+        else:
+            raise NotImplementedError
 
     @abstractmethod
     def _get_observation_space(self):
@@ -304,12 +305,8 @@ class CableManipulationBase(TwoArmEnv):
 
     def reset(self):
         obs = super(CableManipulationBase, self).reset()
-        if self.get_desired_goal_fn is not None:
-            self.desired_goal = self.get_desired_goal_fn()
-            assert self.desired_goal.shape == self.observation_space["desired_goal"].shape
-
-        if self.use_desired_goal:
-            assert self.get_desired_goal_fn is not None
+        self.desired_goal = self.goal_handler.get_desired_goal()
+        assert self.desired_goal.shape == self.observation_space["desired_goal"].shape
 
         return obs
 
@@ -448,7 +445,7 @@ class CableManipulationBase(TwoArmEnv):
         else:
             raise NotImplementedError
 
-        if self.use_desired_goal:
+        if self.goal_handler is not None:
             sensors.append(get_desired_goal)
             names.append("desired_goal")
 

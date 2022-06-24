@@ -14,6 +14,7 @@ from demonstration.policies.bring_near.bring_near_policy import BringNearDemonst
 from demonstration.policies.parameterized_reach.policy import ParameterizedReachDemonstrationPolicy
 from env.bring_near import BringNearEnv
 from env.cable_manipulation_base import CableManipulationBase
+from env.goal_handler import HinDRLGoalHandler
 from env.parameterized_reach import ParameterizedReachEnv
 from eval import EvalVideoCallback
 from model.hindrl_buffer import HinDRLReplayBuffer, HinDRLTQC, HerReplayBufferWithDemonstrationGoals
@@ -52,7 +53,8 @@ configs = [{
     },
     "env_class": BringNearEnv,
     "env_kwargs": {"horizon": 400,
-                   "use_desired_goal": True},
+                   "goal_handler": HinDRLGoalHandler("/home/mark/tum/2022ss/thesis/master_thesis/demonstration/collection/BringNear/1656018243_408839/demo.hdf5",
+                                                     m=10, k=1)},
 
     }]
 
@@ -90,7 +92,6 @@ def train(_config):
     eval_env_config['has_offscreen_renderer'] = True
     eval_env_config['use_camera_obs'] = True
     eval_env = Monitor(_config['env_class'](**eval_env_config))
-    eval_env.env.get_desired_goal_fn = env.envs[0].env.get_desired_goal_fn
     env.reset()
     eval_env.reset()
     # Use deterministic actions for evaluation

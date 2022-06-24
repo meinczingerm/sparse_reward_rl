@@ -12,8 +12,6 @@ class HerReplayBufferWithDemonstrationGoals(HerReplayBuffer):
         self.demonstration_hdf5 = demonstration_hdf5
         self.demonstrations = []
 
-        for _env in env.envs:
-            assert _env.use_engineered_observation_encoding
         with h5py.File(demonstration_hdf5, "r") as f:
             for demo_id in f["data"].keys():
                 self.demonstrations.append({'actions': np.array(f["data"][demo_id]["actions"]),
@@ -43,12 +41,7 @@ class HinDRLReplayBuffer(HerReplayBuffer):
                 self.demonstrations["observations"].append(observations)
                 self.online_goal_buffer.append(observations[-1])
 
-        for _env in (_env_monitor.env for _env_monitor in env.envs):
-            _env.get_desired_goal_fn = self.get_online_goal
         super().__init__(env, buffer_size, **kwargs)
-
-    def get_online_goal(self):
-        return copy.deepcopy(self.online_goal_buffer[random.randint(0, len(self.online_goal_buffer) - 1)])
 
     def sample_goals(self, episode_indices: np.ndarray, her_indices: np.ndarray, transitions_indices: np.ndarray,
     ) -> np.ndarray:

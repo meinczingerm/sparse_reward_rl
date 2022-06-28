@@ -1,10 +1,12 @@
 import os
 import warnings
+from multiprocessing import Pool
 
 import torch.autograd
 from robosuite import load_controller_config
 from sb3_contrib import TQC
 from sb3_contrib.common.wrappers import TimeFeatureWrapper
+from stable_baselines3 import HerReplayBuffer
 from stable_baselines3.common.callbacks import EvalCallback, CallbackList
 from stable_baselines3.common.env_util import make_vec_env
 from stable_baselines3.common.monitor import Monitor
@@ -17,12 +19,13 @@ from env.cable_manipulation_base import CableManipulationBase
 from env.goal_handler import HinDRLGoalHandler
 from env.parameterized_reach import ParameterizedReachEnv
 from eval import EvalVideoCallback
-from model.hindrl_buffer import HinDRLReplayBuffer, HinDRLTQC, HerReplayBufferWithDemonstrationGoals
+from model.hindrl_buffer import HinDRLReplayBuffer, HinDRLTQC
 from utils import create_log_dir, save_dict, get_baseline_model_with_name, get_controller_config
 
 configs = [{
-    "demonstration_hdf5": "/home/mark/tum/2022ss/thesis/master_thesis/demonstration/collection/ParameterizedReach_2Waypoint/1655978351_2683008/demo.hdf5",
+    "demonstration_hdf5": "/home/mark/tum/2022ss/thesis/master_thesis/demonstration/collection/ParameterizedReach_2Waypoint/1656412922_273637/demo.hdf5",
     "demonstration_policy": ParameterizedReachDemonstrationPolicy(),
+    "replay_buffer_type": 'HER',
     "model_config":{
             "policy": "MultiInputPolicy",
             "buffer_size": 1000000,
@@ -31,15 +34,19 @@ configs = [{
             "learning_rate": float(1e-3),
             "tau": 0.05,
             "verbose": 1,
-            "learning_starts": 200,
+            "learning_starts": 1000,
             "policy_kwargs": {"net_arch": [512, 512, 512], "n_critics": 2},
         },
     "env_class": ParameterizedReachEnv,
-    "env_kwargs": {"horizon": 200},
+    "env_kwargs": {"horizon": 250,
+                   "goal_handler": HinDRLGoalHandler(
+                       "/home/mark/tum/2022ss/thesis/master_thesis/demonstration/collection/ParameterizedReach_2Waypoint/1656412922_273637/demo.hdf5",
+                       m=10, k=1)},
 },
     {
-    "demonstration_hdf5": "/home/mark/tum/2022ss/thesis/master_thesis/demonstration/collection/BringNear/1656018243_408839/demo.hdf5",
-    "demonstration_policy": BringNearDemonstrationPolicy(),
+    "demonstration_hdf5": "/home/mark/tum/2022ss/thesis/master_thesis/demonstration/collection/ParameterizedReach_2Waypoint/1656412922_273637/demo.hdf5",
+    "demonstration_policy": ParameterizedReachDemonstrationPolicy(),
+    "replay_buffer_type": 'HinDRL',
     "model_config": {
         "policy": "MultiInputPolicy",
         "buffer_size": 1000000,
@@ -51,10 +58,11 @@ configs = [{
         "learning_starts": 1000,
         "policy_kwargs": {"net_arch": [512, 512, 512], "n_critics": 2},
     },
-    "env_class": BringNearEnv,
-    "env_kwargs": {"horizon": 400,
-                   "goal_handler": HinDRLGoalHandler("/home/mark/tum/2022ss/thesis/master_thesis/demonstration/collection/BringNear/1656018243_408839/demo.hdf5",
-                                                     m=10, k=1)},
+    "env_class": ParameterizedReachEnv,
+    "env_kwargs": {"horizon": 250,
+                   "goal_handler": HinDRLGoalHandler(
+                       "/home/mark/tum/2022ss/thesis/master_thesis/demonstration/collection/ParameterizedReach_2Waypoint/1656412922_273637/demo.hdf5",
+                       m=10, k=1)},
 
     }]
 
@@ -68,10 +76,13 @@ def _setup_training(demonstration_hdf5, config):
     config['model_config']['tensorboard_log'] = log_dir
     save_dict(config, os.path.join(log_dir, 'config.json'))
 
-    warnings.warn("This is HNDRL now. Train with the other !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!")
-    replay_buffer = HinDRLReplayBuffer(demonstration_hdf5, env,
-                                       max_episode_length=config['env_kwargs']["horizon"],
-                                       device="cuda")
+    if config['replay_buffer_type'] == "HinDRL":
+        replay_buffer = HinDRLReplayBuffer(demonstration_hdf5, env,
+                                           max_episode_length=config['env_kwargs']["horizon"],
+                                           device="cuda")
+    elif config['replay_buffer_type'] == "HER":
+        replay_buffer = HerReplayBuffer(env, buffer_size=int(1e5), max_episode_length=config['env_kwargs']["horizon"],
+                                        device="cuda")
     print("Env ready")
     model = HinDRLTQC(replay_buffer, **config['model_config'])
     return env, model, log_dir
@@ -90,7 +101,7 @@ def train(_config):
     eval_env_config = _config['env_kwargs']
     eval_env_config['has_renderer'] = False
     eval_env_config['has_offscreen_renderer'] = True
-    eval_env_config['use_camera_obs'] = True
+    eval_env_config['use_camera_obs'] = False
     eval_env = Monitor(_config['env_class'](**eval_env_config))
     env.reset()
     eval_env.reset()
@@ -108,8 +119,16 @@ def train(_config):
     model.learn(50000000, callback=eval_callbacks)
 
 
+def run_parallel(_configs):
+    pool = Pool(processes=len(_configs))
+
+    # map the function to the list and pass
+    # function and list_ranges as arguments
+    pool.map(train, _configs)
+
+
 if __name__ == '__main__':
-    config = configs[1]
+    config = configs[0]
     # _collect_demonstration(config["env_class"](), config["demonstration_policy"], episode_num=30)
     train(config)
-    # run_parallel(_configs=)
+    # run_parallel(_configs=configs)

@@ -7,20 +7,6 @@ from sb3_contrib import TQC
 from stable_baselines3 import HerReplayBuffer
 
 
-class HerReplayBufferWithDemonstrationGoals(HerReplayBuffer):
-    def __init__(self, demonstration_hdf5, env, buffer_size=int(1e5), **kwargs):
-        self.demonstration_hdf5 = demonstration_hdf5
-        self.demonstrations = []
-
-        with h5py.File(demonstration_hdf5, "r") as f:
-            for demo_id in f["data"].keys():
-                self.demonstrations.append({'actions': np.array(f["data"][demo_id]["actions"]),
-                                            'engineered_encodings':
-                                                np.array(f["data"][demo_id]["engineered_encodings"])})
-
-        self.goal_buffer = [demo["engineered_encodings"][-1] for demo in self.demonstrations]
-
-
 class HinDRLReplayBuffer(HerReplayBuffer):
     def __init__(self, demonstration_hdf5, env, replay_strategy="uniform_demonstration",
                  buffer_size=int(1e5), **kwargs):

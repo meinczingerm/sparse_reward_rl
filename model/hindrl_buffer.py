@@ -42,6 +42,9 @@ class HinDRLReplayBuffer(HerReplayBuffer):
                 self.online_goal_buffer.append(observations[-1])
 
         super().__init__(env, buffer_size, **kwargs)
+        self._load_demonstrations_to_buffer()
+        print("Done")
+
 
     def sample_goals(self, episode_indices: np.ndarray, her_indices: np.ndarray, transitions_indices: np.ndarray,
     ) -> np.ndarray:
@@ -71,13 +74,29 @@ class HinDRLReplayBuffer(HerReplayBuffer):
         goals = goals.reshape([goals.shape[0], 1, goals.shape[1]])
         return goals
 
-
-
-
-
-
-
-
+    def _load_demonstrations_to_buffer(self):
+        for episode_idx in range(len(self.demonstrations["observations"])):
+            episode_observations = self.demonstrations["observations"][episode_idx]
+            episode_actions = self.demonstrations["actions"][episode_idx]
+            for timestep_idx in range(episode_observations.shape[0]):
+                obs = {"observation": episode_observations[timestep_idx],
+                       "achieved_goal": episode_observations[timestep_idx],
+                       "desired_goal": episode_observations[-1]}
+                action = episode_actions[timestep_idx]
+                if timestep_idx != (episode_observations.shape[0] - 1):
+                    next_obs = {"observation": episode_observations[timestep_idx + 1],
+                                "achieved_goal": episode_observations[timestep_idx + 1],
+                                "desired_goal": episode_observations[-1]}
+                    reward = 0  # Reward is always 0 until the last timestep
+                    done = 0
+                else:
+                    # Last step in demonstration will remain in the same position
+                    next_obs = obs
+                    reward = 1  # Last step reward in demonstration is always 1
+                    done = 1
+                # Empty infos
+                infos = [{}]
+                self.add(obs, next_obs, action, reward, done, infos=infos)
 
 
 class HinDRLTQC(TQC):

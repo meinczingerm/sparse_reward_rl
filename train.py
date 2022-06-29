@@ -34,7 +34,7 @@ configs = [{
             "learning_rate": float(1e-3),
             "tau": 0.05,
             "verbose": 1,
-            "learning_starts": 1000,
+            "learning_starts": 250,
             "policy_kwargs": {"net_arch": [512, 512, 512], "n_critics": 2},
         },
     "env_class": ParameterizedReachEnv,

@@ -22,49 +22,49 @@ from eval import EvalVideoCallback
 from model.hindrl_buffer import HinDRLReplayBuffer, HinDRLTQC
 from utils import create_log_dir, save_dict, get_baseline_model_with_name, get_controller_config
 
-configs = [{
-    "demonstration_hdf5": "/home/mark/tum/2022ss/thesis/master_thesis/demonstration/collection/ParameterizedReach_2Waypoint/1656412922_273637/demo.hdf5",
-    "demonstration_policy": ParameterizedReachDemonstrationPolicy(),
-    "replay_buffer_type": 'HER',
-    "model_config":{
-            "policy": "MultiInputPolicy",
-            "buffer_size": 1000000,
-            "batch_size": 2048,
-            "gamma": 0.95,
-            "learning_rate": float(1e-3),
-            "tau": 0.05,
-            "verbose": 1,
-            "learning_starts": 250,
-            "policy_kwargs": {"net_arch": [512, 512, 512], "n_critics": 2},
-        },
-    "env_class": ParameterizedReachEnv,
-    "env_kwargs": {"horizon": 250,
-                   "goal_handler": HinDRLGoalHandler(
-                       "/home/mark/tum/2022ss/thesis/master_thesis/demonstration/collection/ParameterizedReach_2Waypoint/1656412922_273637/demo.hdf5",
-                       m=10, k=1)},
-},
-    {
-    "demonstration_hdf5": "/home/mark/tum/2022ss/thesis/master_thesis/demonstration/collection/ParameterizedReach_2Waypoint/1656412922_273637/demo.hdf5",
-    "demonstration_policy": ParameterizedReachDemonstrationPolicy(),
-    "replay_buffer_type": 'HinDRL',
-    "model_config": {
-        "policy": "MultiInputPolicy",
-        "buffer_size": 1000000,
-        "batch_size": 2048,
-        "gamma": 0.95,
-        "learning_rate": float(1e-3),
-        "tau": 0.05,
-        "verbose": 1,
-        "learning_starts": 1000,
-        "policy_kwargs": {"net_arch": [512, 512, 512], "n_critics": 2},
-    },
-    "env_class": ParameterizedReachEnv,
-    "env_kwargs": {"horizon": 250,
-                   "goal_handler": HinDRLGoalHandler(
-                       "/home/mark/tum/2022ss/thesis/master_thesis/demonstration/collection/ParameterizedReach_2Waypoint/1656412922_273637/demo.hdf5",
-                       m=10, k=1)},
-
-    }]
+# configs = [{
+#     "demonstration_hdf5": "/home/mark/tum/2022ss/thesis/master_thesis/demonstration/collection/ParameterizedReach_2Waypoint/1656412922_273637/demo.hdf5",
+#     "demonstration_policy": ParameterizedReachDemonstrationPolicy(),
+#     "replay_buffer_type": 'HER',
+#     "model_config":{
+#             "policy": "MultiInputPolicy",
+#             "buffer_size": 1000000,
+#             "batch_size": 2048,
+#             "gamma": 0.95,
+#             "learning_rate": float(1e-3),
+#             "tau": 0.05,
+#             "verbose": 1,
+#             "learning_starts": 250,
+#             "policy_kwargs": {"net_arch": [512, 512, 512], "n_critics": 2},
+#         },
+#     "env_class": ParameterizedReachEnv,
+#     "env_kwargs": {"horizon": 250,
+#                    "goal_handler": HinDRLGoalHandler(
+#                        "/home/mark/tum/2022ss/thesis/master_thesis/demonstration/collection/ParameterizedReach_2Waypoint/1656412922_273637/demo.hdf5",
+#                        m=10, k=1)},
+# },
+#     {
+#     "demonstration_hdf5": "/home/mark/tum/2022ss/thesis/master_thesis/demonstration/collection/ParameterizedReach_2Waypoint/1656412922_273637/demo.hdf5",
+#     "demonstration_policy": ParameterizedReachDemonstrationPolicy(),
+#     "replay_buffer_type": 'HinDRL',
+#     "model_config": {
+#         "policy": "MultiInputPolicy",
+#         "buffer_size": 1000000,
+#         "batch_size": 2048,
+#         "gamma": 0.95,
+#         "learning_rate": float(1e-3),
+#         "tau": 0.05,
+#         "verbose": 1,
+#         "learning_starts": 1000,
+#         "policy_kwargs": {"net_arch": [512, 512, 512], "n_critics": 2},
+#     },
+#     "env_class": ParameterizedReachEnv,
+#     "env_kwargs": {"horizon": 250,
+#                    "goal_handler": HinDRLGoalHandler(
+#                        "/home/mark/tum/2022ss/thesis/master_thesis/demonstration/collection/ParameterizedReach_2Waypoint/1656412922_273637/demo.hdf5",
+#                        m=10, k=1)},
+#
+#     }]
 
 
 def _setup_training(demonstration_hdf5, config):
@@ -92,7 +92,9 @@ def _collect_demonstration(env, demonstration_policy, episode_num):
     env_config = {
         'env_name': env.name
     }
-    collect_demonstrations(env, env_config=env_config, demonstration_policy=demonstration_policy, episode_num=episode_num)
+    demo_path = collect_demonstrations(env, env_config=env_config, demonstration_policy=demonstration_policy,
+                                 episode_num=episode_num)
+    return demo_path
 
 
 def train(_config):

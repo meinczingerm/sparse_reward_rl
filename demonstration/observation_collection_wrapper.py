@@ -33,6 +33,8 @@ class ObservationCollectionWrapper(DataCollectionWrapper):
             info = {}
             info["actions"] = np.array(action)
             info["observation"] = ret[0]["observation"]
+            if "desired_goal" in ret[0].keys():
+                info["desired_goal"] = ret[0]["desired_goal"]
             self.action_infos.append(info)
 
         # flush collected data to disk if necessary

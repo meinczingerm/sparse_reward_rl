@@ -103,6 +103,7 @@ def gather_demonstrations_as_hdf5(directory, out_dir, env_info):
         states = []
         actions = []
         observation = []
+        desired_goal = []
 
         for state_file in sorted(glob(state_paths)):
             dic = np.load(state_file, allow_pickle=True)
@@ -112,6 +113,9 @@ def gather_demonstrations_as_hdf5(directory, out_dir, env_info):
             for ai in dic["action_infos"]:
                 actions.append(ai["actions"])
                 observation.append(ai["observation"])
+                if "desired_goal" in ai.keys():
+                    desired_goal.append(ai["desired_goal"])
+
 
         if len(states) == 0:
             continue
@@ -135,6 +139,8 @@ def gather_demonstrations_as_hdf5(directory, out_dir, env_info):
         ep_data_grp.create_dataset("states", data=np.array(states))
         ep_data_grp.create_dataset("actions", data=np.array(actions))
         ep_data_grp.create_dataset("observations", data=np.array(observation))
+        if len(desired_goal) > 0:
+            ep_data_grp.create_dataset("desired_goal", data=np.array(desired_goal))
 
     # write dataset attributes (metadata)
     now = datetime.datetime.now()
@@ -188,3 +194,4 @@ def collect_demonstrations(env, env_config: dict, demonstration_policy, episode_
         shutil.rmtree(directory)
 
     gather_demonstrations_as_hdf5(tmp_directory, new_dir, env_config)
+    return os.path.join(new_dir, "demo.hdf5")

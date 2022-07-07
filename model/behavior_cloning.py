@@ -5,13 +5,17 @@ import numpy as np
 import pytorch_lightning as pl
 import torch
 from pytorch_lightning.loggers import TensorBoardLogger
+from sb3_contrib import TQC
+from sb3_contrib.tqc.policies import Actor
+from stable_baselines3.common.evaluation import evaluate_policy
+from stable_baselines3.common.vec_env import VecEnv, DummyVecEnv
 from torch import nn, optim
 from torch.utils.data import Dataset, DataLoader
 
 from demonstration.policies.parameterized_reach.policy import ParameterizedReachDemonstrationPolicy
 from env.parameterized_reach import ParameterizedReachEnv
 from train import _collect_demonstration
-from utils import get_project_root_path
+from utils import get_project_root_path, save_result_gif
 
 
 class DemonstrationDataset(Dataset):
@@ -34,14 +38,17 @@ class DemonstrationDataset(Dataset):
         return self.demonstrations["observations"].shape[0]
 
     def __getitem__(self, idx):
-        stacked_obs_with_goal = torch.cat([self.demonstrations["observations"][idx],
-                                           self.demonstrations["desired_goals"][idx]]).float()
+        obs_dict = {
+            "observation": self.demonstrations["observations"][idx].float(),
+            "achieved_goal": self.demonstrations["observations"][idx].float(),
+            "desired_goal": self.demonstrations["desired_goals"][idx].float()
+        }
         actions = self.demonstrations["actions"][idx].float()
-        return stacked_obs_with_goal, actions
+        return obs_dict, actions
 
 
 class BCModule(pl.LightningModule):
-    def __init__(self, policy):
+    def __init__(self, policy: Actor):
         super().__init__()
         self.policy = policy
 
@@ -49,7 +56,7 @@ class BCModule(pl.LightningModule):
         # training_step defines the train loop.
         # it is independent of forward
         observation, action = batch
-        predicted_action = self.policy(observation)
+        predicted_action = self.policy.forward(observation, deterministic=True)
         loss = nn.functional.mse_loss(predicted_action, action)
         # Logging to TensorBoard by default
         self.log("train_loss", loss)
@@ -59,23 +66,42 @@ class BCModule(pl.LightningModule):
         optimizer = optim.Adam(self.parameters(), lr=1e-3)
         return optimizer
 
+def _get_model():
+    model = TQC(env=ParameterizedReachEnv(number_of_waypoints=1), policy="MultiInputPolicy", policy_kwargs={"net_arch": [512, 512, 512],
+                                                                                       "n_critics": 2})
+    return model
 
-if __name__ == '__main__':
+def train_bc():
+    model = _get_model()
+    policy = model.actor
+    bc_model = BCModule(policy)
+
     # expert_policy = ParameterizedReachDemonstrationPolicy()
-    # env = ParameterizedReachEnv()
-
-    # demo_path = _collect_demonstration(env, expert_policy, 5)
-    demo_path = "/home/mark/tum/2022ss/thesis/master_thesis/demonstration/collection/ParameterizedReach_2Waypoint/1657026234_7696974/demo.hdf5"
+    # env = ParameterizedReachEnv(number_of_waypoints=1)
+    demo_path = "/home/mark/tum/2022ss/thesis/master_thesis/demonstration/collection/ParameterizedReach_1Waypoint/1657201198_045844/demo.hdf5"
     dataset = DemonstrationDataset(demo_path)
     train_dataloader = DataLoader(dataset, batch_size=1024, shuffle=True)
 
-    policy = nn.Sequential(nn.Linear(12, 128), nn.ReLU(), nn.Linear(128, 128), nn.ReLU(), nn.Linear(128, 7))
-    bc_model = BCModule(policy)
-
-    logger = TensorBoardLogger(os.path.join(get_project_root_path(),"training_logs"), name="BC_model")
+    logger = TensorBoardLogger(os.path.join(get_project_root_path(), "training_logs"), name="BC_model")
     trainer = pl.Trainer(max_epochs=10000, accelerator="gpu", logger=logger)
-    trainer.fit(model=bc_model, train_dataloaders=train_dataloader)
+    eval_env = ParameterizedReachEnv(number_of_waypoints=1, has_offscreen_renderer=True)
+    if not isinstance(eval_env, VecEnv):
+        eval_env = DummyVecEnv([lambda: eval_env])
+    # print("Evaluating...")
+    # mean_reward, std_reward = evaluate_policy(model, eval_env)
+    # print(f"Eval results: Mean:{mean_reward}, Std:{std_reward}")
 
+    trainer.fit(model=bc_model, train_dataloaders=train_dataloader)
+    save_result_gif(eval_env, model, trainer.log_dir, "result.gif", 1000)
+    print("Evaluating...")
+    mean_reward, std_reward = evaluate_policy(model, eval_env)
+    print(f"Eval results: Mean:{mean_reward}, Std:{std_reward}")
+
+    print("Done")
+
+
+if __name__ == '__main__':
+    train_bc()
 
 
 

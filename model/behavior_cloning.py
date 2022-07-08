@@ -48,9 +48,15 @@ class DemonstrationDataset(Dataset):
 
 
 class BCModule(pl.LightningModule):
-    def __init__(self, policy: Actor):
+    def __init__(self, model, eval_env):
+        """
+        :param model: RL model containing the actor network (necessary for evaluating in environment)
+        :param eval_env: evaluation environment
+        """
         super().__init__()
-        self.policy = policy
+        self.model = model
+        self.policy = model.actor
+        self.eval_env = eval_env
 
     def training_step(self, batch, batch_idx):
         # training_step defines the train loop.
@@ -62,40 +68,49 @@ class BCModule(pl.LightningModule):
         self.log("train_loss", loss)
         return loss
 
+    def validation_step(self, batch, batch_idx):
+        observation, action = batch
+        predicted_action = self.policy.forward(observation, deterministic=True)
+        loss = nn.functional.mse_loss(predicted_action, action)
+        # Logging to TensorBoard by default
+        self.log("validation_loss", loss)
+
+    def validation_epoch_end(self, *args) -> None:
+        rewards, _ = evaluate_policy(self.model, self.eval_env, n_eval_episodes=20,
+                                                  return_episode_rewards=True)
+        success_rate = sum(rewards)/len(rewards)
+        self.log("env_success_rate", success_rate)
+
     def configure_optimizers(self):
         optimizer = optim.Adam(self.parameters(), lr=1e-3)
         return optimizer
 
 def _get_model():
-    model = TQC(env=ParameterizedReachEnv(number_of_waypoints=1), policy="MultiInputPolicy", policy_kwargs={"net_arch": [512, 512, 512],
+    model = TQC(env=ParameterizedReachEnv(number_of_waypoints=1), policy="MultiInputPolicy", policy_kwargs={"net_arch": [64],
                                                                                        "n_critics": 2})
     return model
 
 def train_bc():
+    eval_env = ParameterizedReachEnv(number_of_waypoints=1)
     model = _get_model()
-    policy = model.actor
-    bc_model = BCModule(policy)
+    bc_model = BCModule(model, eval_env)
 
     # expert_policy = ParameterizedReachDemonstrationPolicy()
     # env = ParameterizedReachEnv(number_of_waypoints=1)
     demo_path = "/home/mark/tum/2022ss/thesis/master_thesis/demonstration/collection/ParameterizedReach_1Waypoint/1657201198_045844/demo.hdf5"
     dataset = DemonstrationDataset(demo_path)
     train_dataloader = DataLoader(dataset, batch_size=1024, shuffle=True)
+    val_dataset = DemonstrationDataset("/home/mark/tum/2022ss/thesis/master_thesis/demonstration/collection/ParameterizedReach_1Waypoint/1657200303_512026/demo.hdf5")
+    val_dataloader = DataLoader(val_dataset, batch_size=1024)
 
     logger = TensorBoardLogger(os.path.join(get_project_root_path(), "training_logs"), name="BC_model")
-    trainer = pl.Trainer(max_epochs=10000, accelerator="gpu", logger=logger)
+    trainer = pl.Trainer(max_epochs=50000, accelerator="gpu", logger=logger, check_val_every_n_epoch=2000)
     eval_env = ParameterizedReachEnv(number_of_waypoints=1, has_offscreen_renderer=True)
     if not isinstance(eval_env, VecEnv):
         eval_env = DummyVecEnv([lambda: eval_env])
-    # print("Evaluating...")
-    # mean_reward, std_reward = evaluate_policy(model, eval_env)
-    # print(f"Eval results: Mean:{mean_reward}, Std:{std_reward}")
 
-    trainer.fit(model=bc_model, train_dataloaders=train_dataloader)
+    trainer.fit(model=bc_model, train_dataloaders=train_dataloader, val_dataloaders=val_dataloader)
     save_result_gif(eval_env, model, trainer.log_dir, "result.gif", 1000)
-    print("Evaluating...")
-    mean_reward, std_reward = evaluate_policy(model, eval_env)
-    print(f"Eval results: Mean:{mean_reward}, Std:{std_reward}")
 
     print("Done")
 

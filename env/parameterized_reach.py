@@ -107,10 +107,10 @@ class ParameterizedReachEnv(SingleArmEnv):
                                        dtype="float32")
 
         low_limit = [-2, -2, -2, -2 * np.pi, -2 * np.pi, -2 * np.pi]
-        # low_limit.extend([0] * (self.number_of_waypoints))
+        low_limit.extend([0] * (self.number_of_waypoints-1))
         low_limit = np.array(low_limit)
         high_limit = [2, 2, 2, 2 * np.pi, 2 * np.pi, 2 * np.pi]
-        # high_limit.extend([1] * (self.number_of_waypoints))
+        high_limit.extend([1] * (self.number_of_waypoints-1))
         high_limit = np.array(high_limit)
 
         self.observation_space = spaces.Dict(
@@ -158,9 +158,11 @@ class ParameterizedReachEnv(SingleArmEnv):
         if self._check_success():
             return np.zeros(self.observation_space["observation"].shape)
         desired_pose = self.goal_poses[self.idx_of_reached_waypoint + 1]
-        desired_mask = np.zeros(self.number_of_waypoints)
-        desired_mask[:self.idx_of_reached_waypoint + 2] = 1
-        return np.hstack([desired_pose])
+        # desired mask is the same as the current mask, because this way there is zero distance between masks if the
+        # current and the  target goal is in the same "stage"
+        desired_mask = np.zeros(self.number_of_waypoints-1)
+        desired_mask[:self.idx_of_reached_waypoint + 1] = 1
+        return np.hstack([desired_pose, desired_mask])
 
     def _get_engineered_encoding(self):
         """
@@ -172,9 +174,9 @@ class ParameterizedReachEnv(SingleArmEnv):
 
         gripper_pos = self._eef_xpos
         gripper_axis_angle = T.quat2axisangle(self._eef_xquat)
-        progress_mask = np.zeros(self.number_of_waypoints)  # Last waypoint doesn't have separate progress mask
+        progress_mask = np.zeros(self.number_of_waypoints-1)  # Last waypoint doesn't have separate progress mask
         progress_mask[:self.idx_of_reached_waypoint + 1] = 1
-        return np.hstack([gripper_pos, gripper_axis_angle])
+        return np.hstack([gripper_pos, gripper_axis_angle, progress_mask])
 
     def get_random_goals(self):
         random_positions = [np.random.uniform(low=np.array([0.4, -0.3, 0]), high=np.array([0.6, 0.3, 0.4]))

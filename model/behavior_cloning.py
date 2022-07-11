@@ -85,27 +85,37 @@ class BCModule(pl.LightningModule):
         optimizer = optim.Adam(self.parameters(), lr=1e-3)
         return optimizer
 
-def _get_model():
-    model = TQC(env=ParameterizedReachEnv(number_of_waypoints=1), policy="MultiInputPolicy", policy_kwargs={"net_arch": [64],
-                                                                                       "n_critics": 2})
+def _get_model(_config):
+    model = TQC(env=ParameterizedReachEnv(**_config["env_kwargs"]), policy="MultiInputPolicy",
+                policy_kwargs={**_config["model"]["policy_kwargs"]})
     return model
 
-def train_bc():
-    eval_env = ParameterizedReachEnv(number_of_waypoints=1)
-    model = _get_model()
+
+def train_bc(_config):
+    eval_env = ParameterizedReachEnv(**_config['env_kwargs'])
+    model = _get_model(_config)
     bc_model = BCModule(model, eval_env)
 
-    # expert_policy = ParameterizedReachDemonstrationPolicy()
-    # env = ParameterizedReachEnv(number_of_waypoints=1)
-    demo_path = "/home/mark/tum/2022ss/thesis/master_thesis/demonstration/collection/ParameterizedReach_1Waypoint/1657201198_045844/demo.hdf5"
-    dataset = DemonstrationDataset(demo_path)
-    train_dataloader = DataLoader(dataset, batch_size=1024, shuffle=True)
-    val_dataset = DemonstrationDataset("/home/mark/tum/2022ss/thesis/master_thesis/demonstration/collection/ParameterizedReach_1Waypoint/1657200303_512026/demo.hdf5")
-    val_dataloader = DataLoader(val_dataset, batch_size=1024)
+    if _config["regenerate_demonstrations"]:
+        assert (_config["training_demo_path"] is None) and (_config["validation_demo_path"] is None)
+        expert_policy = _config["expert_policy"]
+        env = ParameterizedReachEnv(**_config['env_kwargs'])
+        training_demo_path = _collect_demonstration(env, demonstration_policy=expert_policy,
+                                           episode_num=_config["number_of_demonstrations"])
+        validation_demo_path = _collect_demonstration(env, demonstration_policy=expert_policy,
+                                           episode_num=_config["number_of_demonstrations"])
+    else:
+        training_demo_path = _config["training_demo_path"]
+        validation_demo_path = _config["validation_demo_path"]
+    dataset = DemonstrationDataset(training_demo_path)
+    train_dataloader = DataLoader(dataset, batch_size=_config["model"]["batch_size"], shuffle=True)
+    val_dataset = DemonstrationDataset(validation_demo_path)
+    val_dataloader = DataLoader(val_dataset, batch_size=_config["model"]["batch_size"])
 
-    logger = TensorBoardLogger(os.path.join(get_project_root_path(), "training_logs"), name="BC_model")
+    logger = TensorBoardLogger(os.path.join(get_project_root_path(), "training_logs"),
+                               name=f"BC_model_{env.name}")
     trainer = pl.Trainer(max_epochs=50000, accelerator="gpu", logger=logger, check_val_every_n_epoch=2000)
-    eval_env = ParameterizedReachEnv(number_of_waypoints=1, has_offscreen_renderer=True)
+    eval_env = ParameterizedReachEnv(**_config["env_kwargs"], has_offscreen_renderer=True)
     if not isinstance(eval_env, VecEnv):
         eval_env = DummyVecEnv([lambda: eval_env])
 
@@ -116,7 +126,17 @@ def train_bc():
 
 
 if __name__ == '__main__':
-    train_bc()
+    config = {"env_kwargs": {"number_of_waypoints": 2},
+              "env_class": ParameterizedReachEnv,
+              "number_of_demonstrations": 30,
+              "regenerate_demonstrations": True,
+              "training_demo_path": None,
+              "validation_demo_path": None,
+              "expert_policy": ParameterizedReachDemonstrationPolicy(),
+              "model": {"batch_size": 1024,
+                        "policy_kwargs": {"net_arch": [64]}}}
+
+    train_bc(config)
 
 
 

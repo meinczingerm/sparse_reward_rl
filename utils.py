@@ -98,6 +98,12 @@ def create_log_dir(directory_name):
 
 def save_dict(data_dict, path):
     import json
+    from pathlib import Path
+
+    path = Path(path)
+    # create dir if necessary
+    parent_path = path.parent.absolute()
+    os.makedirs(parent_path, exist_ok=True)
 
     with open(path, 'w') as f:
         json.dump(str(data_dict), f)

@@ -15,7 +15,7 @@ from torch.utils.data import Dataset, DataLoader
 from demonstration.policies.parameterized_reach.policy import ParameterizedReachDemonstrationPolicy
 from env.parameterized_reach import ParameterizedReachEnv
 from train import _collect_demonstration
-from utils import get_project_root_path, save_result_gif
+from utils import get_project_root_path, save_result_gif, save_dict
 
 
 class DemonstrationDataset(Dataset):
@@ -82,7 +82,7 @@ class BCModule(pl.LightningModule):
         self.log("env_success_rate", success_rate)
 
     def configure_optimizers(self):
-        optimizer = optim.Adam(self.parameters(), lr=1e-3)
+        optimizer = optim.Adam(self.parameters(), lr=1e-3, weight_decay=1e-2)
         return optimizer
 
 def _get_model(_config):
@@ -115,7 +115,8 @@ def train_bc(_config):
     logger = TensorBoardLogger(os.path.join(get_project_root_path(), "training_logs"),
                                name=f"BC_model_{env.name}")
     trainer = pl.Trainer(max_epochs=50000, accelerator="gpu", logger=logger, check_val_every_n_epoch=2000)
-    eval_env = ParameterizedReachEnv(**_config["env_kwargs"], has_offscreen_renderer=True)
+    save_dict(_config, os.path.join(trainer.log_dir, "config.json"))
+    eval_env = _config["env_class"](**_config["env_kwargs"], has_offscreen_renderer=True)
     if not isinstance(eval_env, VecEnv):
         eval_env = DummyVecEnv([lambda: eval_env])
 
@@ -154,6 +155,9 @@ if __name__ == '__main__':
                         "policy_kwargs": {"net_arch": [64]}}}
 
     train_bc(config)
+
+    # load_and_eval("/home/mark/tum/2022ss/thesis/master_thesis/training_logs/BC_model_ParameterizedReach_2Waypoint/version_2",
+    #               config)
 
 
 

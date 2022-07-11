@@ -125,6 +125,23 @@ def train_bc(_config):
     print("Done")
 
 
+def load_and_eval(log_dir, _config, num_of_eval_videos=5):
+    checkpoint_path = os.path.join(log_dir, "checkpoints")
+    file_name = os.listdir(checkpoint_path)[0]
+    checkpoint_path = os.path.join(checkpoint_path, file_name)
+
+    model = _get_model(_config)
+
+    model = BCModule.load_from_checkpoint(checkpoint_path, model=model, eval_env=None).model
+
+    eval_env = _config['env_class'](**_config["env_kwargs"], has_offscreen_renderer=True)
+    if not isinstance(eval_env, VecEnv):
+        eval_env = DummyVecEnv([lambda: eval_env])
+
+    for i in range(num_of_eval_videos):
+        save_result_gif(eval_env, model, log_dir, f"result{i}.gif", 1000)
+
+
 if __name__ == '__main__':
     config = {"env_kwargs": {"number_of_waypoints": 2},
               "env_class": ParameterizedReachEnv,

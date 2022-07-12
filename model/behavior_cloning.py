@@ -48,7 +48,7 @@ class DemonstrationDataset(Dataset):
 
 
 class BCModule(pl.LightningModule):
-    def __init__(self, model, eval_env):
+    def __init__(self, model, eval_env, optimizer_kwargs):
         """
         :param model: RL model containing the actor network (necessary for evaluating in environment)
         :param eval_env: evaluation environment
@@ -57,6 +57,7 @@ class BCModule(pl.LightningModule):
         self.model = model
         self.policy = model.actor
         self.eval_env = eval_env
+        self.optimizer_kwargs = optimizer_kwargs
 
     def training_step(self, batch, batch_idx):
         # training_step defines the train loop.
@@ -82,7 +83,7 @@ class BCModule(pl.LightningModule):
         self.log("env_success_rate", success_rate)
 
     def configure_optimizers(self):
-        optimizer = optim.Adam(self.parameters(), lr=1e-3, weight_decay=1e-2)
+        optimizer = optim.Adam(self.parameters(), **self.optimizer_kwargs)
         return optimizer
 
 def _get_model(_config):
@@ -94,12 +95,12 @@ def _get_model(_config):
 def train_bc(_config):
     eval_env = ParameterizedReachEnv(**_config['env_kwargs'])
     model = _get_model(_config)
-    bc_model = BCModule(model, eval_env)
+    bc_model = BCModule(model, eval_env, _config["model"]["optimizer_kwargs"])
 
+    env = ParameterizedReachEnv(**_config['env_kwargs'])
     if _config["regenerate_demonstrations"]:
         assert (_config["training_demo_path"] is None) and (_config["validation_demo_path"] is None)
         expert_policy = _config["expert_policy"]
-        env = ParameterizedReachEnv(**_config['env_kwargs'])
         training_demo_path = _collect_demonstration(env, demonstration_policy=expert_policy,
                                            episode_num=_config["number_of_demonstrations"])
         validation_demo_path = _collect_demonstration(env, demonstration_policy=expert_policy,
@@ -147,12 +148,14 @@ if __name__ == '__main__':
     config = {"env_kwargs": {"number_of_waypoints": 2},
               "env_class": ParameterizedReachEnv,
               "number_of_demonstrations": 30,
-              "regenerate_demonstrations": True,
-              "training_demo_path": None,
-              "validation_demo_path": None,
+              "regenerate_demonstrations": False,
+              "training_demo_path": "/home/mark/tum/2022ss/thesis/master_thesis/demonstration/collection/ParameterizedReach_2Waypoint/1657548769_0267944/demo.hdf5",
+              "validation_demo_path": "/home/mark/tum/2022ss/thesis/master_thesis/demonstration/collection/ParameterizedReach_2Waypoint/1657548848_052718/demo.hdf5",
               "expert_policy": ParameterizedReachDemonstrationPolicy(),
               "model": {"batch_size": 1024,
-                        "policy_kwargs": {"net_arch": [64]}}}
+                        "policy_kwargs": {"net_arch": [64]},
+                        "optimizer_kwargs": {"lr": 1e-3,
+                                             "weight_decay": 1e-4}}}
 
     train_bc(config)
 

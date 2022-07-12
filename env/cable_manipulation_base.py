@@ -1,20 +1,24 @@
 import os.path
 import warnings
+from abc import abstractmethod
 from collections import OrderedDict
 
 import numpy as np
 import robosuite.utils.transform_utils as T
 from gym.vector.utils import spaces
+from mujoco_py import MjRenderContextOffscreen
+from robosuite import load_controller_config
 from robosuite.environments.manipulation.two_arm_env import TwoArmEnv
 from robosuite.models.arenas import TableArena
 from robosuite.models.objects import MujocoXMLObject
 from robosuite.models.tasks import ManipulationTask
 from robosuite.utils.observables import Observable, sensor
 
+from env.goal_handler import HinDRLGoalHandler
 from utils import get_project_root_path
 
 
-class CableInsertionEnv(TwoArmEnv):
+class CableManipulationBase(TwoArmEnv):
     """
     This class corresponds to the lifting task for two robot arms.
 
@@ -158,23 +162,17 @@ class CableInsertionEnv(TwoArmEnv):
 
     def __init__(
         self,
-        robots,
+        robots=["Panda", "Panda"],
         use_engineered_observation_encoding=True,  # special for HinDRL
-        use_desired_goal=False,  # special for HinDRL
-        get_desired_goal_fn=None,  # special for HinDRL
-        env_configuration="default",
-        controller_configs=None,
+        goal_handler: HinDRLGoalHandler = None,# special for HinDRL
+        env_configuration="single-arm-parallel",
         gripper_types="default",
         initialization_noise="default",
         table_full_size=(1.5, 2, 0.05),
         table_friction=(1.0, 5e-3, 1e-4),
-        use_camera_obs=True,
-        use_object_obs=True,
-        reward_scale=1.0,
-        reward_shaping=False,
-        placement_initializer=None,
+        use_camera_obs=False,
         has_renderer=False,
-        has_offscreen_renderer=True,
+        has_offscreen_renderer=False,
         render_camera="frontview",
         render_collision_mesh=False,
         render_visual_mesh=True,
@@ -193,8 +191,7 @@ class CableInsertionEnv(TwoArmEnv):
     ):
 
         self.use_engineered_observation_encoding = use_engineered_observation_encoding
-        self.use_desired_goal = use_desired_goal
-        self.get_desired_goal_fn = get_desired_goal_fn
+        self.goal_handler = goal_handler
         self.desired_goal = None
 
         # settings for table top
@@ -202,16 +199,16 @@ class CableInsertionEnv(TwoArmEnv):
         self.table_friction = table_friction
         self.table_offset = np.array((0, 0, 0.9))
 
-        # reward configuration
-        self.reward_scale = reward_scale
-        self.reward_shaping = reward_shaping
 
-        # whether to use ground-truth object states
-        self.use_object_obs = use_object_obs
+        # this is a hotfix based on the discussion  https://github.com/ARISE-Initiative/robosuite/issues/114
+        assert not (has_renderer and has_offscreen_renderer)
+        self._offscreen_renderer = has_offscreen_renderer
+        if has_offscreen_renderer:
+            from mujoco_py import GlfwContext
+            GlfwContext(offscreen=True)
 
-        # object placement initializer
-        self.placement_initializer = placement_initializer
-
+        controller_configs = load_controller_config(default_controller="IK_POSE")
+        controller_configs['kp'] = 100
         super().__init__(
             robots=robots,
             env_configuration=env_configuration,
@@ -246,29 +243,48 @@ class CableInsertionEnv(TwoArmEnv):
                                                  self.robots[1].controller.input_max]), dtype="float32")
 
         warnings.warn("Observation space uses unlimited box. Should be updated.")
-        if self.use_desired_goal:
-            self.observation_space = spaces.Dict(
-                dict(observation=spaces.Box(
-                        -np.inf, np.inf, shape=(7,), dtype="float32"
-                    ),
-                    desired_goal=spaces.Box(
-                        -np.inf, np.inf, shape=(7,), dtype="float32"
-                    ),
-                    achieved_goal=spaces.Box(
-                        -np.inf, np.inf, shape=(7,), dtype="float32"
-                    )
-                )
-            )
-        else:
-            self.observation_space = spaces.Dict(
-                dict(observation=spaces.Box(
-                        -np.inf, np.inf, shape=(7,), dtype="float32"
-                    )
-                )
-            )
+        self.observation_space = self._get_observation_space()
 
         self.metadata = None
         self.spec = None
+
+    def compute_reward(self, achieved_goal, goal, info):
+        """
+        Calculates the reward given the achieved_goal and goal. It is used by HER for relabeling.
+        :param achieved_goal: batched
+        :param goal:
+        :param info:
+        :return:
+        """
+        if self.goal_handler is not None:
+            self.goal_handler.compute_reward(achieved_goal, goal, info)
+        else:
+            raise NotImplementedError
+
+    @abstractmethod
+    def _get_observation_space(self):
+        """
+        Returns observation space as spaces dict usually with keys=["observation", "achieved_goal", "desired_goal"]
+        :return: observation space for the env defined as spaces.Dict({"key": spaces.box})
+        """
+        raise NotImplementedError
+
+    @abstractmethod
+    def _get_engineered_encoding(self):
+        """
+        Calculates the heuristically engineered encoding of states.
+        :return: encoding (flattened np.array)
+        """
+
+        raise NotImplementedError
+
+    @abstractmethod
+    def _check_success(self):
+        """
+        Checks succes of current state.
+        :return: True if current state is succesful, False otherwise
+        """
+        raise NotImplementedError
 
     def reward(self, action=None):
         """
@@ -281,23 +297,36 @@ class CableInsertionEnv(TwoArmEnv):
             float: reward value
         """
         if self._check_success():
-            reward = 5000
+            reward = 1
         else:
-            reward = -1
+            reward = 0
 
         return reward
 
     def reset(self):
-        obs = super(CableInsertionEnv, self).reset()
-        if self.get_desired_goal_fn is not None:
-            self.desired_goal = self.get_desired_goal_fn()
-            assert self.desired_goal.shape == self.observation_space["desired_goal"].shape
-
-        if self.use_desired_goal:
-            assert self.get_desired_goal_fn is not None
+        obs = super(CableManipulationBase, self).reset()
+        self.desired_goal = self.goal_handler.get_desired_goal()
+        assert self.desired_goal.shape == self.observation_space["desired_goal"].shape
 
         return obs
 
+    def _reset_internal(self):
+        """Resets simulation internal configurations."""
+        if self._offscreen_renderer:
+            if self.sim._render_context_offscreen is None:
+                render_context = MjRenderContextOffscreen(self.sim, device_id=self.render_gpu_device_id)
+                self.sim.add_render_context(render_context)
+            self.sim._render_context_offscreen.vopt.geomgroup[0] = 1 if self.render_collision_mesh else 0
+            self.sim._render_context_offscreen.vopt.geomgroup[1] = 1 if self.render_visual_mesh else 0
+
+        super(CableManipulationBase, self)._reset_internal()
+
+    def render(self, mode='human'):
+        if mode == 'rgb':
+            picture = self.sim.render(camera_name='frontview', width=500, height=500)
+            return np.flip(picture, axis=0)
+        else:
+            return super(CableManipulationBase, self).render(mode)
 
     def _load_model(self):
         """
@@ -380,6 +409,11 @@ class CableInsertionEnv(TwoArmEnv):
             return np.array(self.sim.data.site_xmat[mother_grip_id])
 
         @sensor(modality=modality)
+        def mother_tip_pos(obs_cache):
+            mother_tip_id = self.sim.model.site_name2id(self._important_sites["mother_tip"])
+            return np.array(self.sim.data.site_xpos[mother_tip_id])
+
+        @sensor(modality=modality)
         def father_grip_pos(obs_cache):
             father_grip_id = self.sim.model.site_name2id(self._important_sites["father_grip"])
             return np.array(self.sim.data.site_xpos[father_grip_id])
@@ -390,43 +424,13 @@ class CableInsertionEnv(TwoArmEnv):
             return np.array(self.sim.data.site_xmat[father_grip_id])
 
         @sensor(modality=modality)
-        def engineered_encoding(obs_cache):
-            # Important data
-            robot0_gripper_pos = self._eef0_xpos
-            robot1_gripper_pos = self._eef1_xpos
-
-            mother_grip_id = self.sim.model.site_name2id(self._important_sites["mother_grip"])
-            mother_grip_pos = np.array(self.sim.data.site_xpos[mother_grip_id])
-            mother_grip_mat = np.array(self.sim.data.site_xmat[mother_grip_id]).reshape([3, 3])
-            father_grip_id = self.sim.model.site_name2id(self._important_sites["father_grip"])
-            father_grip_pos = np.array(self.sim.data.site_xpos[father_grip_id])
-            father_grip_mat = np.array(self.sim.data.site_xmat[father_grip_id]).reshape([3, 3])
-
-            mother_tip_id = self.sim.model.site_name2id(self._important_sites["mother_tip"])
-            mother_tip_pos = np.array(self.sim.data.site_xpos[mother_tip_id])
+        def father_tip_pos(obs_cache):
             father_tip_id = self.sim.model.site_name2id(self._important_sites["father_tip"])
-            father_tip_pos = np.array(self.sim.data.site_xpos[father_tip_id])
-            mother_inner_tip_id = self.sim.model.site_name2id(self._important_sites["mother_inner_tip"])
-            mother_inner_tip = np.array(self.sim.data.site_xpos[mother_inner_tip_id])
+            return np.array(self.sim.data.site_xpos[father_tip_id])
 
-            # Calculate encoding based on the HinDRL article (https://arxiv.org/pdf/2112.00597.pdf)
-            distance_to_mother_grip = np.linalg.norm(robot0_gripper_pos - mother_grip_pos)
-            distance_to_father_grip = np.linalg.norm(robot1_gripper_pos - father_grip_pos)
-            distance_between_cable_tips = np.linalg.norm(father_tip_pos - mother_tip_pos)
-            grasp_mother = self._check_grasp(self.robots[0].gripper, "cable_stand_mother_contact")
-            grasp_father = self._check_grasp(self.robots[1].gripper, "cable_stand_father_contact")
-
-            # y and z axis is mixed in the respective mujoco sites,
-            #  so we are calculating the dot product between the y axis
-            cable_z_product = np.dot(mother_grip_mat @ np.array([[0], [1], [0]]).squeeze(),
-                                     father_grip_mat @ np.array([[0], [1], [0]]).squeeze())
-
-            z_mother = mother_grip_mat @ np.array([[0], [1], [0]]).squeeze()
-            socket_distance_vector = father_tip_pos - mother_inner_tip
-            z_distance_to_socket = np.dot(z_mother, socket_distance_vector)
-
-            encoding = np.hstack([distance_to_mother_grip, distance_to_father_grip, distance_between_cable_tips,
-                                  grasp_mother, grasp_father, cable_z_product, z_distance_to_socket])
+        @sensor(modality=modality)
+        def engineered_encoding(obs_cache):
+            encoding = self._get_engineered_encoding()
             return encoding
 
         @sensor(modality=modality)
@@ -434,14 +438,14 @@ class CableInsertionEnv(TwoArmEnv):
             return self.desired_goal
 
         if self.use_engineered_observation_encoding:
-            sensors = [mother_grip_pos, mother_grip_mat, father_grip_pos, father_grip_mat, engineered_encoding,
-                       engineered_encoding]
-            names = [f"mother_grip_pos", "mother_grip_mat", "father_grip_pos", "father_grip_mat", "observation",
-                     "achieved_goal"]
+            sensors = [mother_grip_pos, mother_grip_mat, mother_tip_pos, father_grip_pos, father_grip_mat,
+                       father_tip_pos, engineered_encoding, engineered_encoding]
+            names = [f"mother_grip_pos", "mother_grip_mat", "mother_tip_pos", "father_grip_pos", "father_grip_mat",
+                     "father_tip_pos", "observation", "achieved_goal"]
         else:
             raise NotImplementedError
 
-        if self.use_desired_goal:
+        if self.goal_handler is not None:
             sensors.append(get_desired_goal)
             names.append("desired_goal")
 
@@ -454,28 +458,6 @@ class CableInsertionEnv(TwoArmEnv):
             )
 
         return observables
-
-    def _check_success(self):
-        """
-        Check if cable is succesfully inserted.
-        """
-        father_tip_id = self.sim.model.site_name2id(self._important_sites["father_tip"])
-        father_tip_pos = np.array(self.sim.data.site_xpos[father_tip_id])
-        father_tip_ori = self.sim.data.site_xmat[father_tip_id].reshape([3, 3])
-        father_tip_z_ori = np.matmul(father_tip_ori, np.array([[0], [1], [0]])) # Z and Y axis is changed in the xml site
-
-        mother_tip_id = self.sim.model.site_name2id(self._important_sites["mother_tip"])
-        mother_tip_pos = np.array(self.sim.data.site_xpos[mother_tip_id])
-        mother_tip_ori = self.sim.data.site_xmat[mother_tip_id].reshape([3, 3])
-        mother_tip_z_ori = np.matmul(mother_tip_ori, np.array([[0], [1], [0]])) # Z and Y axis is changed in the xml site
-
-
-        pos_error = np.linalg.norm(father_tip_pos-mother_tip_pos, 2)
-        ori_error = np.linalg.norm(mother_tip_z_ori + father_tip_z_ori) # the two z direction has to be oppsite
-        if pos_error < 0.003 and ori_error < 0.03:
-            return True
-        else:
-            return False
 
     def _post_action(self, action):
         """
@@ -491,7 +473,7 @@ class CableInsertionEnv(TwoArmEnv):
         reward = self.reward(action)
 
         # done if number of elapsed timesteps is greater than horizon
-        self.done = (self.timestep >= self.horizon) or reward == 5000
+        self.done = (self.timestep >= self.horizon) or self._check_success()
 
         return reward, self.done, {}
 

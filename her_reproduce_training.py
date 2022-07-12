@@ -123,5 +123,5 @@ def run_parallel(_configs):
 
 
 if __name__ == '__main__':
-    # train(configs[0])
-    run_parallel(_configs=configs)
+    train(configs[0])
+    # run_parallel(_configs=configs)

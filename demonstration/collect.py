@@ -1,5 +1,5 @@
 """
-A script for collecting demonstrations as .hdf5 using the demonstration/policy.py as a policy.
+A script for collecting demonstrations as .hdf5 using the demonstration/bring_near_policy.py as a policy.
 The .hdf5 file can not be played back the standard way with DemoPlaybackCameraMover, because the
 env is not part of robosuite.
 """
@@ -21,7 +21,8 @@ from robosuite.wrappers import DataCollectionWrapper, VisualizationWrapper
 from demonstration.inverse_kinematic_policy import IKDemonstrationPolicy
 from demonstration.observation_collection_wrapper import ObservationCollectionWrapper
 from demonstration.policy import DemonstrationPolicy
-from env.cable_insertion_env import CableInsertionEnv
+from env.cable_manipulation_base import CableManipulationBase
+from env.cable_insertion import CableInsertionEnv
 from utils import get_project_root_path
 
 
@@ -36,7 +37,8 @@ def run_demonstration_episode(env, policy, render=True):
 
     env.reset()
     policy.reset()
-    env.render()
+    if render:
+        env.render()
     random_action = np.random.uniform(low=env.action_spec[0], high=env.action_spec[1])
     observation, _, done, _ = env.step(random_action)
 
@@ -48,7 +50,7 @@ def run_demonstration_episode(env, policy, render=True):
         if render:
             env.render()
         if done:
-            succesful = reward == 5000  # TODO check original reward used
+            succesful = reward == 1
             break
 
     # cleanup for end of data collection episodes
@@ -100,7 +102,8 @@ def gather_demonstrations_as_hdf5(directory, out_dir, env_info):
         state_paths = os.path.join(directory, ep_directory, "state_*.npz")
         states = []
         actions = []
-        engineered_encodings = []
+        observation = []
+        desired_goal = []
 
         for state_file in sorted(glob(state_paths)):
             dic = np.load(state_file, allow_pickle=True)
@@ -109,7 +112,10 @@ def gather_demonstrations_as_hdf5(directory, out_dir, env_info):
             states.extend(dic["states"])
             for ai in dic["action_infos"]:
                 actions.append(ai["actions"])
-                engineered_encodings.append(ai["engineered_encoding"])
+                observation.append(ai["observation"])
+                if "desired_goal" in ai.keys():
+                    desired_goal.append(ai["desired_goal"])
+
 
         if len(states) == 0:
             continue
@@ -132,7 +138,9 @@ def gather_demonstrations_as_hdf5(directory, out_dir, env_info):
         # write datasets for states and actions
         ep_data_grp.create_dataset("states", data=np.array(states))
         ep_data_grp.create_dataset("actions", data=np.array(actions))
-        ep_data_grp.create_dataset("engineered_encodings", data=np.array(engineered_encodings))
+        ep_data_grp.create_dataset("observations", data=np.array(observation))
+        if len(desired_goal) > 0:
+            ep_data_grp.create_dataset("desired_goal", data=np.array(desired_goal))
 
     # write dataset attributes (metadata)
     now = datetime.datetime.now()
@@ -145,35 +153,17 @@ def gather_demonstrations_as_hdf5(directory, out_dir, env_info):
     f.close()
 
 
-def collect_demonstrations(episode_num=10):
+def collect_demonstrations(env, env_config: dict, demonstration_policy, episode_num=10):
     """
     Collect demonstrations in demonstration/collection folder.
+    :param env: environment instance
+    :param env_config: (env) config dict to save in the demonstration (has to contain key "env_name")
+    :param demonstration_policy: demonstration policy instance
     :param episode_num: number of succesful episodes to collect
     :return: None
     """
-    controller_config = load_controller_config(default_controller="IK_POSE")
-    controller_config['kp'] = 100
-
-    env = CableInsertionEnv(robots=["Panda", "Panda"],  # load a Sawyer robot and a Panda robot
-                            gripper_types="default",  # use default grippers per robot arm
-                            controller_configs=controller_config,  # each arm is controlled using OSC
-                            env_configuration="single-arm-parallel",
-                            render_camera=None,# (two-arm envs only) arms face each other
-                            has_renderer=True,  # no on-screen rendering
-                            has_offscreen_renderer=False,  # no off-screen rendering
-                            control_freq=20,  # 20 hz control for applied actions
-                            horizon=500,  # each episode terminates after 200 steps
-                            use_object_obs=True,  # provide object observations to agent
-                            use_camera_obs=False,  # don't provide image observations to agent
-                            reward_shaping=True)  # use a dense reward signal for learning)
-
-    env_config = {
-        "env_name": "CableInsertionEnv",
-        "robots": ["Panda", "Panda"],
-        "controller_configs": controller_config,
-    }
+    env_config_dict = env_config
     env_config = json.dumps(env_config)
-    demonstration_policy = IKDemonstrationPolicy()
 
     # Wrap this with visualization wrapper
     env = VisualizationWrapper(env)
@@ -184,14 +174,15 @@ def collect_demonstrations(episode_num=10):
 
     # make a new timestamped directory
     t1, t2 = str(time.time()).split(".")
-    new_dir = os.path.join(get_project_root_path(), 'demonstration', 'collection', f"{t1}_{t2}")
+    new_dir = os.path.join(get_project_root_path(), 'demonstration', 'collection', env_config_dict['env_name'],
+                           f"{t1}_{t2}")
     os.makedirs(new_dir)
 
     # collect demonstrations
     number_of_succesful_demonstrations = 0
     unsuccesful_episode_dirs = []
     while number_of_succesful_demonstrations != episode_num:
-        succesful = run_demonstration_episode(env, demonstration_policy)
+        succesful = run_demonstration_episode(env, demonstration_policy, render=False)
         if succesful:
             number_of_succesful_demonstrations += 1
         else:
@@ -203,12 +194,4 @@ def collect_demonstrations(episode_num=10):
         shutil.rmtree(directory)
 
     gather_demonstrations_as_hdf5(tmp_directory, new_dir, env_config)
-
-def read_hdf5_file(file_path):
-    with h5py.File(file_path, "r") as f:
-        demo_1 = f["data"]["demo_1"]
-        print("k")
-
-if __name__ == '__main__':
-    collect_demonstrations(2)
-    # read_hdf5_file("/home/mark/tum/2022ss/thesis/master_thesis/demonstration/collection/1654522800_8797252/demo.hdf5")
+    return os.path.join(new_dir, "demo.hdf5")

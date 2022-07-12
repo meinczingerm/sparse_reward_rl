@@ -4,6 +4,7 @@ import numpy as np
 from robosuite import load_controller_config
 from robosuite.utils.transform_utils import quat2mat, get_orientation_error, mat2quat, euler2mat
 
+from env.bring_near import BringNearEnv
 from env.cable_manipulation_base import CableManipulationBase
 from env.cable_insertion import CableInsertionEnv
 
@@ -12,7 +13,7 @@ class RobotTarget:
     """
     Class with data describing the milestone for the robotarm.
     """
-    def __init__(self, target_pos, target_quat, target_gripper, wait=None, time_step_limit=None, relative_to=None):
+    def __init__(self, target_pos, target_quat, target_gripper, wait=None, time_step_limit=None, relative=None):
         """
         Stages that define the movement of each robot arm
         :param type: "glob" or "rel" defining whether the goal stage is defined in global frame or relative to
@@ -24,13 +25,15 @@ class RobotTarget:
         :param time_step_limit: number of steps to keep the target (in this case there is no guarantee for reaching
                                 target) Suggested for gripping, because there is no other way to know when the grabbing
                                 is done.
-        :param relative_to: if given, then the target pos is calculated relative to observation[$relative_to$]
+        :param relative: if given as str: then the target pos is calculated relative to observation[$relative$]
+                            if given as list: then the target pos is calculated as:
+                                              observation[$relative[0]$]-observation[$relative[1]$] + cur_eef_pos
         """
-        if relative_to is None:
+        if relative is None:
             self.type = "glob"
         else:
             self.type = "rel"
-        self.relative_to = relative_to
+        self.relative = relative
 
         self.target_pos = target_pos
         self.target_quat = target_quat
@@ -65,7 +68,7 @@ class RobotStages:
             self.stage += 1
 
 
-class IKDemonstrationPolicy:
+class BringNearDemonstrationPolicy:
     def __init__(self):
         self.robot_stages = None
         self.reset()
@@ -75,45 +78,33 @@ class IKDemonstrationPolicy:
                                           self.random_quat_around(np.array([0.5, -0.5, -0.5, -0.5])), -1),
                                       RobotTarget(np.array([0, 0, 0]),
                                                   np.array([0.6532815, -0.6532815, -0.2705981, -0.2705981]),
-                                                  -1, relative_to="mother_grip_pos"),
+                                                  -1, relative="mother_grip_pos"),
                                       RobotTarget(np.array([0, 0, 0]),
                                                   np.array([0.6532815, -0.6532815, -0.2705981, -0.2705981]),
-                                                  1, relative_to="mother_grip_pos", time_step_limit=20),
+                                                  1, relative="mother_grip_pos", time_step_limit=20),
                                       RobotTarget(self.random_pos_around(np.array([-0.35, -0.1, 1.45])),
-                                                  np.array([0.2705981, -0.2705981, -0.6532815, -0.6532815]),
+                                                  self.random_quat_around(
+                                                        np.array([0.2705981, -0.2705981, -0.6532815, -0.6532815]),
+                                                        angle_limit=0.5),
                                                   1),
-                                      RobotTarget(np.array([0, 0, 0]),
-                                                  np.array([0.2705981, -0.2705981, -0.6532815, -0.6532815]),
-                                                  1, relative_to="robot0_eef_pos"),
                                       ])
 
-        robot_1_stages = RobotStages([RobotTarget(self.random_pos_around(np.array([-0.35, 0.5, 1.35])),
+        robot_1_stages = RobotStages([RobotTarget(self.random_pos_around(np.array([-0.35, 0.3, 1.35])),
                                           self.random_quat_around(np.array([0.5, 0.5, -0.5, 0.5])), -1),
                                       RobotTarget(np.array([0, 0, 0]),
                                                   np.array([0.6532815, 0.6532815, -0.2705981, 0.2705981]),
-                                                  -1, relative_to="father_grip_pos"),
+                                                  -1, relative="father_grip_pos"),
                                       RobotTarget(np.array([0, 0, 0]),
                                                   np.array([0.6532815, 0.6532815, -0.2705981, 0.2705981]),
-                                                  1, relative_to="father_grip_pos", time_step_limit=20),
+                                                  1, relative="father_grip_pos", time_step_limit=20),
                                       RobotTarget(np.array([0, 0, 0]),
                                                   np.array([0.6532815, 0.6532815, -0.2705981, 0.2705981]),
-                                                  1, relative_to="father_grip_pos", wait=3),
-                                      RobotTarget(np.array([0, 0.2, 0]),
-                                                  np.array([0.2705981, 0.2705981, -0.6532815, 0.6532815]),
-                                                  1, relative_to="mother_grip_pos"),
-                                      RobotTarget(np.array([0, 0.13, 0]),
-                                                  np.array([0.2705981, 0.2705981, -0.6532815, 0.6532815]),
-                                                  1, relative_to="mother_grip_pos"),
-                                      RobotTarget(np.array([0, 0.12, 0]),
-                                                  np.array([0.2705981, 0.2705981, -0.6532815, 0.6532815]),
-                                                  1, relative_to="mother_grip_pos"),
+                                                  1, relative="father_grip_pos", wait=3),
                                       RobotTarget(np.array([0, 0, 0]),
-                                                  np.array([0.2705981, 0.2705981, -0.6532815, 0.6532815]),
-                                                  -1, relative_to="robot1_eef_pos"),
-                                      RobotTarget(np.array([0, 0.1, -0.1]),
-                                                  np.array([0.6532815, 0.6532815, -0.2705981, 0.2705981]),
-                                                  -1, relative_to="robot1_eef_pos")
-                                      ])
+                                                  self.random_quat_around(
+                                                      np.array([0.2705981, 0.2705981, -0.6532815, 0.6532815]),
+                                                      angle_limit=1),
+                                                  1, relative=["mother_tip_pos", "father_tip_pos"])])
         self.robot_stages = [robot_0_stages, robot_1_stages]
 
     def step(self, observation):
@@ -136,7 +127,12 @@ class IKDemonstrationPolicy:
         self.check_current_stage(observation, 0)
         target = self.robot_stages[0].target
         if target.type == "rel":
-            target_pos = observation[target.relative] + target.target_pos
+            if type(target.relative) is str:
+                target_pos = observation[target.relative] + target.target_pos
+            else:
+                assert len(target.relative) == 2
+                target_pos = observation[target.relative[0]] - observation[target.relative[1]] +\
+                             observation["robot0_eef_pos"]
         else:
             target_pos = target.target_pos
         target_quat = target.target_quat
@@ -152,7 +148,12 @@ class IKDemonstrationPolicy:
         self.check_current_stage(observation, 1)
         target = self.robot_stages[1].target
         if target.type == "rel":
-            target_pos = observation[target.relative] + target.target_pos
+            if type(target.relative) is str:
+                target_pos = observation[target.relative] + target.target_pos
+            else:
+                assert len(target.relative) == 2
+                target_pos = observation[target.relative[0]] - observation[target.relative[1]] +\
+                             observation["robot1_eef_pos"]
         else:
             target_pos = target.target_pos
         target_quat = target.target_quat
@@ -209,7 +210,12 @@ class IKDemonstrationPolicy:
 
             _done = (pos_done and ori_done)
         else:
-            target_pos = observation[target.relative] + target.target_pos
+            if type(target.relative) is str:
+                target_pos = observation[target.relative] + target.target_pos
+            else:
+                assert len(target.relative) == 2
+                target_pos = observation[target.relative[0]] - observation[target.relative[1]] +\
+                             observation[f"robot{robot_idx}_eef_pos"]
             pos_done = np.allclose(target_pos, observation[f'robot{robot_idx}_eef_pos'], atol=1e-3, rtol=0)
             ori_done = np.allclose(target.target_quat, observation[f'robot{robot_idx}_eef_quat'], atol=1e-2, rtol=0)
             _done = (pos_done and ori_done)
@@ -249,9 +255,9 @@ class IKDemonstrationPolicy:
 
 
 if __name__ == '__main__':
-    env = CableInsertionEnv(has_renderer=True)
+    env = BringNearEnv(has_renderer=True)
 
-    demonstration_policy = IKDemonstrationPolicy()
+    demonstration_policy = BringNearDemonstrationPolicy()
 
 
 
@@ -265,4 +271,4 @@ if __name__ == '__main__':
         if done:
             print(done)
             env.reset()
-            demonstration_policy = IKDemonstrationPolicy()
+            demonstration_policy = BringNearDemonstrationPolicy()

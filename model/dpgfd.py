@@ -39,7 +39,8 @@ class DPGfD(TQC):
         self._update_learning_rate(optimizers)
 
         ent_coef_losses, ent_coefs = [], []
-        actor_losses, critic_losses, bc_losses, scaled_bc_losses, non_zero_bc_losses = [], [], [], [], []
+        actor_losses, critic_losses, bc_losses, scaled_bc_losses, non_zero_bc_losses, num_from_demonstration =\
+            [], [], [], [], [], []
 
         for gradient_step in range(gradient_steps):
             # Sample replay buffer
@@ -107,6 +108,7 @@ class DPGfD(TQC):
             qf_pi = self.critic(replay_data.observations, actions_pi).mean(dim=2).mean(dim=1, keepdim=True)
             bc_loss = th.linalg.norm(actions_pi-replay_data.actions, axis=1, keepdims=True) * replay_data.is_demo
             non_zero_bc_losses.append(bc_loss[bc_loss > 0].mean().item())
+            num_from_demonstration.append(bc_loss[bc_loss > 0].shape[0])
             scaling = 100/(self._n_updates + 1) # +1 is necessary to avoid "inf"
             scaling = 100
             scaled_bc_loss = bc_loss * self.lambda_bc * scaling
@@ -132,6 +134,7 @@ class DPGfD(TQC):
         self.logger.record("train/critic_loss", np.mean(critic_losses))
         self.logger.record("train/bc_loss", np.mean(bc_losses))
         self.logger.record("train/non_zero_bc_loss", np.mean(non_zero_bc_losses))
+        self.logger.record("train/num_of_demonstration_samples", np.mean(num_from_demonstration))
         self.logger.record("train/scaled_bc_loss", np.mean(scaled_bc_losses))
         self.logger.record("train/scaling_factor", scaling)
         if len(ent_coef_losses) > 0:
@@ -185,6 +188,7 @@ if __name__ == '__main__':
               "model_kwargs": {"batch_size": 2048,
                         "lambda_bc": 1,
                         "policy_kwargs": {"net_arch": [32, 32]},
+                        "learning_starts": 1,
                         }}
 
     train(config)

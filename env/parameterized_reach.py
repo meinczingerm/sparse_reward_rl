@@ -255,6 +255,8 @@ class ParameterizedReachEnv(SingleArmEnv):
         axis_angle_dist = np.linalg.norm(achieved_axis_angle - goal_axis_angle, axis=1)
         reward = np.logical_and((pos_dist < self.success_pos_dist_limit),
                                 (axis_angle_dist < self.success_angle_dist_limit)).astype(float)
+
+        # reward = self.goal_handler.compute_reward(achieved_goal, goal, info)
         return reward
 
 

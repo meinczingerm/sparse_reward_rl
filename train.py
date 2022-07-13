@@ -19,7 +19,7 @@ from env.cable_manipulation_base import CableManipulationBase
 from env.goal_handler import HinDRLGoalHandler
 from env.parameterized_reach import ParameterizedReachEnv
 from eval import EvalVideoCallback
-from model.hindrl_buffer import HinDRLReplayBuffer, HinDRLTQC
+from model.hindrl_buffer import HinDRLReplayBuffer
 from utils import create_log_dir, save_dict, get_baseline_model_with_name, get_controller_config
 
 # configs = [{
@@ -89,8 +89,12 @@ def _setup_training(demonstration_hdf5, config):
 
 
 def _collect_demonstration(env, demonstration_policy, episode_num):
+    if hasattr(env, "envs"):
+        env_name = env.envs[0].name
+    else:
+        env_name = env.name
     env_config = {
-        'env_name': env.name
+        'env_name': env_name
     }
     demo_path = collect_demonstrations(env, env_config=env_config, demonstration_policy=demonstration_policy,
                                  episode_num=episode_num)

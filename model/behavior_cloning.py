@@ -93,11 +93,11 @@ def _get_model(_config):
 
 
 def train_bc(_config):
-    eval_env = ParameterizedReachEnv(**_config['env_kwargs'])
+    eval_env = _config["env_class"](**_config['env_kwargs'])
     model = _get_model(_config)
     bc_model = BCModule(model, eval_env, _config["model"]["optimizer_kwargs"])
 
-    env = ParameterizedReachEnv(**_config['env_kwargs'])
+    env = _config["env_class"](**_config['env_kwargs'])
     if _config["regenerate_demonstrations"]:
         assert (_config["training_demo_path"] is None) and (_config["validation_demo_path"] is None)
         expert_policy = _config["expert_policy"]

@@ -48,7 +48,7 @@ class HinDRLGoalHandler:
         epsilon = mean_distance + k * std_distance
         return epsilon
 
-    def compute_reward(self, achieved_goal, goal, info):
+    def compute_reward(self, achieved_goal, goal, infos):
         """
         Goal conditioned reward calculation based on self.epsilon threshold
         :param achieved_goal: batched achieved goal
@@ -59,6 +59,8 @@ class HinDRLGoalHandler:
         # Sparse reward
         distance = np.linalg.norm(achieved_goal - goal)
         reward = (distance < self.epsilon).astype(float)
+        for info in infos:
+            info['is_demonstration'] = False
         return reward
 
     def get_desired_goal(self):

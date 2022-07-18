@@ -111,9 +111,8 @@ class DPGfD(TQC):
             bc_loss = th.linalg.norm(actions_pi-replay_data.actions, axis=1, keepdims=True) * replay_data.is_demo
             non_zero_bc_losses.append(bc_loss[bc_loss > 0].mean().item())
             num_from_demonstration.append(bc_loss[bc_loss > 0].shape[0])
-            scaling = 100/(self._n_updates + 1) # +1 is necessary to avoid "inf"
-            scaling = 1
-            scaled_bc_loss = bc_loss * self.lambda_bc * scaling
+            scaling = self.lambda_bc
+            scaled_bc_loss = bc_loss * scaling
             actor_loss = (ent_coef * log_prob - qf_pi + scaled_bc_loss).mean()
             actor_losses.append(actor_loss.item())
             bc_losses.append(bc_loss.mean().item())
@@ -181,7 +180,7 @@ def train(_config):
 
 if __name__ == '__main__':
     config = {"env_kwargs": {"number_of_waypoints": 1,
-                             "horizon": 150},
+                             "horizon": 100},
               "env_class": ParameterizedReachEnv,
               "number_of_demonstrations": 100,
               "regenerate_demonstrations": False,

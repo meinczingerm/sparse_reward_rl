@@ -24,7 +24,9 @@ class DPGfD(TQC):
         del model_kwargs["lambda_bc"]
         super(DPGfD, self).__init__("MultiInputPolicy", env, **model_kwargs, device="cuda")
         self.replay_buffer = HinDRLReplayBuffer(demonstration_hdf5, env, n_sampled_goal=0,
-                                                max_episode_length=env.envs[0].horizon, device="cuda")
+                                                max_episode_length=env.envs[0].horizon, device="cuda",
+                                                buffer_size=int(1e6))
+        print("k")
 
 
     def train(self, gradient_steps: int, batch_size: int = 64) -> None:
@@ -110,7 +112,7 @@ class DPGfD(TQC):
             non_zero_bc_losses.append(bc_loss[bc_loss > 0].mean().item())
             num_from_demonstration.append(bc_loss[bc_loss > 0].shape[0])
             scaling = 100/(self._n_updates + 1) # +1 is necessary to avoid "inf"
-            scaling = 100
+            scaling = 1
             scaled_bc_loss = bc_loss * self.lambda_bc * scaling
             actor_loss = (ent_coef * log_prob - qf_pi + scaled_bc_loss).mean()
             actor_losses.append(actor_loss.item())

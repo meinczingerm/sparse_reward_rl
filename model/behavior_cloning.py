@@ -87,7 +87,7 @@ class BCModule(pl.LightningModule):
         return optimizer
 
 def _get_model(_config):
-    model = TQC(env=ParameterizedReachEnv(**_config["env_kwargs"]), policy="MultiInputPolicy",
+    model = TQC(env=_config['env_class'](**_config["env_kwargs"]), policy="MultiInputPolicy",
                 policy_kwargs={**_config["model"]["policy_kwargs"]})
     return model
 

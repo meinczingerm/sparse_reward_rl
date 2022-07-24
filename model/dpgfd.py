@@ -7,7 +7,7 @@ from sb3_contrib.common.utils import quantile_huber_loss
 from stable_baselines3.common.callbacks import EvalCallback, CallbackList
 from stable_baselines3.common.env_util import make_vec_env
 from stable_baselines3.common.monitor import Monitor
-from stable_baselines3.common.utils import polyak_update
+from stable_baselines3.common.utils import polyak_update, safe_mean
 
 from demonstration.policies.parameterized_reach.policy import ParameterizedReachDemonstrationPolicy
 from env.parameterized_reach import ParameterizedReachEnv
@@ -22,10 +22,12 @@ class DPGfD(TQC):
 
         self.lambda_bc = model_kwargs["lambda_bc"]
         del model_kwargs["lambda_bc"]
+        buffer_size = model_kwargs["buffer_size"]
+        del model_kwargs["buffer_size"]
         super(DPGfD, self).__init__("MultiInputPolicy", env, **model_kwargs, device="cuda")
         self.replay_buffer = HinDRLReplayBuffer(demonstration_hdf5, env, n_sampled_goal=0,
                                                 max_episode_length=env.envs[0].horizon, device="cuda",
-                                                buffer_size=int(1e6))
+                                                buffer_size=int(buffer_size))
         print("k")
 
 
@@ -141,6 +143,16 @@ class DPGfD(TQC):
         if len(ent_coef_losses) > 0:
             self.logger.record("train/ent_coef_loss", np.mean(ent_coef_losses))
 
+        if len(self.ep_info_buffer) > 10:
+            rollout_rew_mean = safe_mean([ep_info["r"] for ep_info in list(self.ep_info_buffer)[-10:]])
+        else:
+            rollout_rew_mean = safe_mean([ep_info["r"] for ep_info in list(self.ep_info_buffer)])
+        demo_to_rollout_ratio = max(min(0.1 - rollout_rew_mean * 0.25, 1), 0)
+        self.replay_buffer.demo_to_roullout_sample_ratio = demo_to_rollout_ratio
+
+        if demo_to_rollout_ratio == 0:
+            self.lambda_bc = self.lambda_bc * 0.999
+
 
 def train(_config):
     env = make_vec_env(config['env_class'], env_kwargs=config['env_kwargs'])
@@ -179,17 +191,19 @@ def train(_config):
     model.learn(50000000, callback=eval_callbacks)
 
 if __name__ == '__main__':
-    config = {"env_kwargs": {"number_of_waypoints": 1,
-                             "horizon": 100},
+    config = {"env_kwargs": {"number_of_waypoints": 2,
+                             "horizon": 200},
               "env_class": ParameterizedReachEnv,
               "number_of_demonstrations": 100,
-              "regenerate_demonstrations": False,
-              "demo_path": "/home/mark/tum/2022ss/thesis/master_thesis/demonstration/collection/ParameterizedReach_1Waypoint/1657630758_2669017/demo.hdf5",
+              "regenerate_demonstrations": True,
+              "demo_path": None,
               "expert_policy": ParameterizedReachDemonstrationPolicy(),
               "model_kwargs": {"batch_size": 2048,
+                       "learning_rate": 1e-2,
                         "lambda_bc": 1,
-                        "policy_kwargs": {"net_arch": [32, 32]},
-                        "learning_starts": 1,
+                        "policy_kwargs": {"net_arch": [64]},
+                        "learning_starts": 200,
+                        "buffer_size": 1e5,
                         }}
 
     train(config)

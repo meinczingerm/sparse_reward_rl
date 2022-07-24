@@ -1,7 +1,9 @@
-from typing import Optional, Union, NamedTuple
+from collections import deque
+from typing import Optional, Union, NamedTuple, Dict, List, Any
 
 import h5py
 import numpy as np
+import torch
 import torch as th
 from sb3_contrib import TQC
 from sb3_contrib.common.utils import quantile_huber_loss
@@ -36,6 +38,8 @@ class HinDRLReplayBuffer(HerReplayBuffer):
                 assert _env.use_engineered_observation_encoding
         else:
             assert env.use_engineered_observation_encoding
+
+        self.demo_episode_lengths = []
         with h5py.File(demonstration_hdf5, "r") as f:
             for demo_id in f["data"].keys():
                 actions = np.array(f["data"][demo_id]["actions"])
@@ -43,10 +47,18 @@ class HinDRLReplayBuffer(HerReplayBuffer):
                 self.demonstrations["actions"].append(actions)
                 self.demonstrations["observations"].append(observations)
                 self.online_goal_buffer.append(observations[-1])
+                self.demo_episode_lengths.append(actions.shape[0])
+        self.number_of_demonstrations = len(self.demonstrations["actions"])
+        self.demo_episode_lengths = np.vstack(self.demo_episode_lengths)
 
         super().__init__(env, buffer_size, **kwargs)
+
+        self._demo_buffer = {
+            key: np.zeros((self.number_of_demonstrations, self.max_episode_length, *buffer_item.shape[2:]), dtype=np.float32)
+            for key, buffer_item in self._buffer.items()
+        }
         self._load_demonstrations_to_buffer()
-        print("Done")
+        self.demo_to_roullout_sample_ratio = 0.5
 
 
     def sample_goals(self, episode_indices: np.ndarray, her_indices: np.ndarray, transitions_indices: np.ndarray,
@@ -99,7 +111,50 @@ class HinDRLReplayBuffer(HerReplayBuffer):
                     done = 1
                 # Empty infos
                 infos = [{"is_demonstration": True}]
-                self.add(obs, next_obs, action, reward, done, infos=infos)
+
+                self._demo_buffer["observation"][episode_idx][timestep_idx] = obs["observation"]
+                self._demo_buffer["achieved_goal"][episode_idx][timestep_idx] = obs["achieved_goal"]
+                self._demo_buffer["desired_goal"][episode_idx][timestep_idx] = obs["desired_goal"]
+                self._demo_buffer["action"][episode_idx][timestep_idx] = action
+                self._demo_buffer["done"][episode_idx][timestep_idx] = done
+                self._demo_buffer["reward"][episode_idx][timestep_idx] = reward
+                self._demo_buffer["next_obs"][episode_idx][timestep_idx] = next_obs["observation"]
+                self._demo_buffer["next_achieved_goal"][episode_idx][timestep_idx] = next_obs["achieved_goal"]
+                self._demo_buffer["next_desired_goal"][episode_idx][timestep_idx] = next_obs["desired_goal"]
+
+    def _sample_transitions_from_demonstrations(self, batch_size: Optional[int], maybe_vec_env: Optional[VecNormalize]):
+        episode_indices = np.random.randint(0, self.number_of_demonstrations, batch_size)
+        ep_lengths = self.demo_episode_lengths[episode_indices]
+        transitions_indices = np.random.randint(ep_lengths).squeeze(axis=1)
+        transitions = {key: self._demo_buffer[key][episode_indices, transitions_indices].copy() for key in
+                       self._buffer.keys()}
+
+        # concatenate observation with (desired) goal
+        observations = self._normalize_obs(transitions, maybe_vec_env)
+
+        # HACK to make normalize obs and `add()` work with the next observation
+        next_observations = {
+            "observation": transitions["next_obs"],
+            "achieved_goal": transitions["next_achieved_goal"],
+            # The desired goal for the next observation must be the same as the previous one
+            "desired_goal": transitions["desired_goal"],
+        }
+        next_observations = self._normalize_obs(next_observations, maybe_vec_env)
+
+        next_obs = {key: self.to_torch(next_observations[key][:, 0, :]) for key in self._observation_keys}
+
+        normalized_obs = {key: self.to_torch(observations[key][:, 0, :]) for key in self._observation_keys}
+
+        is_demo = np.full_like(transitions["done"], 1)
+        return DemoDictReplayBufferSamples(
+            observations=normalized_obs,
+            actions=self.to_torch(transitions["action"]),
+            next_observations=next_obs,
+            dones=self.to_torch(transitions["done"]),
+            rewards=self.to_torch(self._normalize_reward(transitions["reward"], maybe_vec_env)),
+            is_demo=self.to_torch(is_demo))
+
+
 
     def _sample_transitions(
         self,
@@ -117,27 +172,21 @@ class HinDRLReplayBuffer(HerReplayBuffer):
         :return: Samples.
         """
         # Select which episodes to use
+        batch_size_from_demo = int(self.demo_to_roullout_sample_ratio * batch_size)
+        batch_size_from_rollout = batch_size - batch_size_from_demo
         if online_sampling:
             assert batch_size is not None, "No batch_size specified for online sampling of HER transitions"
             # Do not sample the episode with index `self.pos` as the episode is invalid
             if self.full:
                 episode_indices = (
-                    np.random.randint(1, self.n_episodes_stored, batch_size) + self.pos
+                    np.random.randint(1, self.n_episodes_stored, batch_size_from_rollout) + self.pos
                 ) % self.n_episodes_stored
             else:
-                episode_indices = np.random.randint(0, self.n_episodes_stored, batch_size)
+                episode_indices = np.random.randint(0, self.n_episodes_stored, batch_size_from_rollout)
             # A subset of the transitions will be relabeled using HER algorithm
-            her_indices = np.arange(batch_size)[: int(self.her_ratio * batch_size)]
+            her_indices = np.arange(batch_size_from_rollout)[: int(self.her_ratio * batch_size_from_rollout)]
         else:
-            assert maybe_vec_env is None, "Transitions must be stored unnormalized in the replay buffer"
-            assert n_sampled_goal is not None, "No n_sampled_goal specified for offline sampling of HER transitions"
-            # Offline sampling: there is only one episode stored
-            episode_length = self.episode_lengths[0]
-            # we sample n_sampled_goal per timestep in the episode (only one is stored).
-            episode_indices = np.tile(0, (episode_length * n_sampled_goal))
-            # we only sample virtual transitions
-            # as real transitions are already stored in the replay buffer
-            her_indices = np.arange(len(episode_indices))
+            raise NotImplementedError
 
         ep_lengths = self.episode_lengths[episode_indices]
 
@@ -153,17 +202,7 @@ class HinDRLReplayBuffer(HerReplayBuffer):
             # Select which transitions to use
             transitions_indices = np.random.randint(ep_lengths)
         else:
-            if her_indices.size == 0:
-                # Episode of one timestep, not enough for using the "future" strategy
-                # no virtual transitions are created in that case
-                return {}, {}, np.zeros(0), np.zeros(0)
-            else:
-                # Repeat every transition index n_sampled_goals times
-                # to sample n_sampled_goal per timestep in the episode (only one is stored).
-                # Now with the corrected episode length when using "future" strategy
-                transitions_indices = np.tile(np.arange(ep_lengths[0]), n_sampled_goal)
-                episode_indices = episode_indices[transitions_indices]
-                her_indices = np.arange(len(episode_indices))
+            raise NotImplementedError
 
         # get selected transitions
         transitions = {key: self._buffer[key][episode_indices, transitions_indices].copy() for key in self._buffer.keys()}
@@ -210,6 +249,8 @@ class HinDRLReplayBuffer(HerReplayBuffer):
         }
         next_observations = self._normalize_obs(next_observations, maybe_vec_env)
 
+        # a = self._sample_transitions_from_demonstrations(20, maybe_vec_env)
+
         if online_sampling:
             next_obs = {key: self.to_torch(next_observations[key][:, 0, :]) for key in self._observation_keys}
 
@@ -217,13 +258,34 @@ class HinDRLReplayBuffer(HerReplayBuffer):
 
             is_demo = np.array([int(transitions["info"][info_idx][0].get("is_demonstration", False))
                                 for info_idx in range(transitions["info"].shape[0])]).reshape(transitions['done'].shape)
-            return DemoDictReplayBufferSamples(
+            rollout_samples = DemoDictReplayBufferSamples(
                 observations=normalized_obs,
                 actions=self.to_torch(transitions["action"]),
                 next_observations=next_obs,
                 dones=self.to_torch(transitions["done"]),
                 rewards=self.to_torch(self._normalize_reward(transitions["reward"], maybe_vec_env)),
                 is_demo=self.to_torch(is_demo))
+
+            demo_samples = self._sample_transitions_from_demonstrations(batch_size_from_demo, maybe_vec_env)
+            return self._merge_samples([rollout_samples, demo_samples])
         else:
             raise NotImplementedError
+
+    def _merge_samples(self, sample_groups: List[DemoDictReplayBufferSamples]) -> DemoDictReplayBufferSamples:
+        """
+        Merges a list of DemoDictReplayBufferSamples to one DemoDictReplayBufferSamples, by stacking all data inside.
+        :return: merged DemoDictReplayBufferSamples
+        """
+        attributes = {}
+        for attrib_name in DemoDictReplayBufferSamples._fields:
+            if type(sample_groups[0].__getattribute__(attrib_name)) is dict:
+                attribute = {}
+                for key in sample_groups[0].__getattribute__(attrib_name).keys():
+                    attribute[key] = torch.cat([sample_group.__getattribute__(attrib_name)[key] for sample_group in
+                                               sample_groups])
+                attributes[attrib_name] = attribute
+            else:
+                attributes[attrib_name] = torch.cat([sample_group.__getattribute__(attrib_name) for
+                                                     sample_group in sample_groups])
+        return DemoDictReplayBufferSamples(**attributes)
 

@@ -146,7 +146,7 @@ class ParameterizedReachEnv(SingleArmEnv):
             picture = self.sim.render(camera_name='frontview', width=500, height=500)
             return np.flip(picture, axis=0)
         else:
-            return super(ParameterizedReachEnv, self).render(mode)
+            return super(ParameterizedReachEnv, self).render()
 
     # Quickfix for issue: https://github.com/ARISE-Initiative/robosuite/issues/321
     @property

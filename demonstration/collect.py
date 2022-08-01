@@ -175,7 +175,7 @@ def collect_demonstrations(env, env_config: dict, demonstration_policy, episode_
     # make a new timestamped directory
     t1, t2 = str(time.time()).split(".")
     new_dir = os.path.join(get_project_root_path(), 'demonstration', 'collection', env_config_dict['env_name'],
-                           f"{t1}_{t2}")
+                           f"{episode_num}_{t1}_{t2}")
     os.makedirs(new_dir)
 
     # collect demonstrations

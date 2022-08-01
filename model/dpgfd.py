@@ -1,4 +1,5 @@
 import os
+from multiprocessing import Pool
 
 import numpy as np
 import torch as th
@@ -23,7 +24,8 @@ class DPGfD(TQC):
         self.lambda_bc = model_kwargs["lambda_bc"]
         del model_kwargs["lambda_bc"]
         buffer_size = model_kwargs["buffer_size"]
-        del model_kwargs["buffer_size"]
+        self.max_demo_ratio = model_kwargs["max_demo_ratio"]
+        del model_kwargs["max_demo_ratio"]
         super(DPGfD, self).__init__("MultiInputPolicy", env, **model_kwargs, device="cuda")
         self.replay_buffer = HinDRLReplayBuffer(demonstration_hdf5, env, n_sampled_goal=0,
                                                 max_episode_length=env.envs[0].horizon, device="cuda",
@@ -140,22 +142,16 @@ class DPGfD(TQC):
         self.logger.record("train/num_of_demonstration_samples", np.mean(num_from_demonstration))
         self.logger.record("train/scaled_bc_loss", np.mean(scaled_bc_losses))
         self.logger.record("train/scaling_factor", scaling)
+        self.logger.record("train/non_zero_reward_sample", replay_data.rewards.sum().item())
         if len(ent_coef_losses) > 0:
             self.logger.record("train/ent_coef_loss", np.mean(ent_coef_losses))
 
-        if len(self.ep_info_buffer) > 10:
-            rollout_rew_mean = safe_mean([ep_info["r"] for ep_info in list(self.ep_info_buffer)[-10:]])
-        else:
-            rollout_rew_mean = safe_mean([ep_info["r"] for ep_info in list(self.ep_info_buffer)])
-        demo_to_rollout_ratio = max(min(0.1 - rollout_rew_mean * 0.25, 1), 0)
+        demo_to_rollout_ratio = min([self.max_demo_ratio, self.buffer_size / self.num_timesteps * self.max_demo_ratio])
         self.replay_buffer.demo_to_roullout_sample_ratio = demo_to_rollout_ratio
-
-        if demo_to_rollout_ratio == 0:
-            self.lambda_bc = self.lambda_bc * 0.999
 
 
 def train(_config):
-    env = make_vec_env(config['env_class'], env_kwargs=config['env_kwargs'])
+    env = make_vec_env(_config['env_class'], env_kwargs=_config['env_kwargs'])
     if _config["regenerate_demonstrations"]:
         assert _config["demo_path"] is None
         expert_policy = _config["expert_policy"]
@@ -165,8 +161,8 @@ def train(_config):
         demo_path = _config["demo_path"]
 
     log_dir = create_log_dir(env.envs[0].name)
-    config['model_kwargs']['tensorboard_log'] = log_dir
-    save_dict(config, os.path.join(log_dir, 'config.json'))
+    _config['model_kwargs']['tensorboard_log'] = log_dir
+    save_dict(_config, os.path.join(log_dir, 'config.json'))
 
     model = DPGfD(demo_path, env, _config["model_kwargs"])
 
@@ -190,20 +186,46 @@ def train(_config):
 
     model.learn(50000000, callback=eval_callbacks)
 
-if __name__ == '__main__':
-    config = {"env_kwargs": {"number_of_waypoints": 2,
-                             "horizon": 200},
-              "env_class": ParameterizedReachEnv,
-              "number_of_demonstrations": 100,
-              "regenerate_demonstrations": True,
-              "demo_path": None,
-              "expert_policy": ParameterizedReachDemonstrationPolicy(),
-              "model_kwargs": {"batch_size": 2048,
-                       "learning_rate": 1e-2,
-                        "lambda_bc": 1,
-                        "policy_kwargs": {"net_arch": [64]},
-                        "learning_starts": 200,
-                        "buffer_size": 1e5,
-                        }}
 
-    train(config)
+def run_parallel(_configs):
+    pool = Pool(processes=len(_configs))
+
+    # map the function to the list and pass
+    # function and list_ranges as arguments
+    pool.map(train, _configs)
+
+if __name__ == '__main__':
+    configs = [{"env_kwargs": {"number_of_waypoints": 2,
+                               "horizon": 200},
+                "env_class": ParameterizedReachEnv,
+                "number_of_demonstrations": 1000,
+                "regenerate_demonstrations": False,
+                "demo_path": "/home/mark/tum/2022ss/thesis/master_thesis/demonstration/collection/ParameterizedReach_2Waypoint/1000_1658869650_9963062/demo.hdf5",
+                "expert_policy": ParameterizedReachDemonstrationPolicy(),
+                "model_kwargs": {"batch_size": 8192,
+                                 "learning_rate": 1e-3,
+                                 "lambda_bc": 10,
+                                 "policy_kwargs": {"net_arch": [64, 64]},
+                                 "learning_starts": 10000,
+                                 "buffer_size": int(1e5),
+                                 "max_demo_ratio": 0.4
+                                 }},
+               {"env_kwargs": {"number_of_waypoints": 2,
+                               "horizon": 200},
+                "env_class": ParameterizedReachEnv,
+                "number_of_demonstrations": 1000,
+                "regenerate_demonstrations": False,
+                "demo_path": "/home/mark/tum/2022ss/thesis/master_thesis/demonstration/collection/ParameterizedReach_2Waypoint/1000_1658869650_9963062/demo.hdf5",
+                "expert_policy": ParameterizedReachDemonstrationPolicy(),
+                "model_kwargs": {"batch_size": 8192,
+                                 "learning_rate": 1e-3,
+                                 "lambda_bc": 10,
+                                 "policy_kwargs": {"net_arch": [32, 32]},
+                                 "learning_starts": 10000,
+                                 "buffer_size": int(1e5),
+                                 "max_demo_ratio": 0.4
+                                 }}
+               ]
+
+    run_parallel(configs)
+    # train(configs[1])

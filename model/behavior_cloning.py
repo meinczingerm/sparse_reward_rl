@@ -104,7 +104,7 @@ def train_bc(_config):
         training_demo_path = _collect_demonstration(env, demonstration_policy=expert_policy,
                                            episode_num=_config["number_of_demonstrations"])
         validation_demo_path = _collect_demonstration(env, demonstration_policy=expert_policy,
-                                           episode_num=_config["number_of_demonstrations"])
+                                           episode_num=40)
     else:
         training_demo_path = _config["training_demo_path"]
         validation_demo_path = _config["validation_demo_path"]
@@ -115,7 +115,7 @@ def train_bc(_config):
 
     logger = TensorBoardLogger(os.path.join(get_project_root_path(), "training_logs"),
                                name=f"BC_model_{env.name}")
-    trainer = pl.Trainer(max_epochs=50000, accelerator="gpu", logger=logger, check_val_every_n_epoch=2000)
+    trainer = pl.Trainer(max_epochs=50000, accelerator="gpu", logger=logger, check_val_every_n_epoch=100)
     save_dict(_config, os.path.join(trainer.log_dir, "config.json"))
     eval_env = _config["env_class"](**_config["env_kwargs"], has_offscreen_renderer=True)
     if not isinstance(eval_env, VecEnv):
@@ -147,13 +147,13 @@ def load_and_eval(log_dir, _config, num_of_eval_videos=5):
 if __name__ == '__main__':
     config = {"env_kwargs": {"number_of_waypoints": 2},
               "env_class": ParameterizedReachEnv,
-              "number_of_demonstrations": 30,
-              "regenerate_demonstrations": False,
-              "training_demo_path": "/home/mark/tum/2022ss/thesis/master_thesis/demonstration/collection/ParameterizedReach_2Waypoint/1657548769_0267944/demo.hdf5",
-              "validation_demo_path": "/home/mark/tum/2022ss/thesis/master_thesis/demonstration/collection/ParameterizedReach_2Waypoint/1657548848_052718/demo.hdf5",
+              "number_of_demonstrations": 1000,
+              "regenerate_demonstrations": True,
+              "training_demo_path": None,
+              "validation_demo_path": None,
               "expert_policy": ParameterizedReachDemonstrationPolicy(),
-              "model": {"batch_size": 1024,
-                        "policy_kwargs": {"net_arch": [64]},
+              "model": {"batch_size": 2048,
+                        "policy_kwargs": {"net_arch": [64, 64]},
                         "optimizer_kwargs": {"lr": 1e-3,
                                              "weight_decay": 1e-4}}}
 

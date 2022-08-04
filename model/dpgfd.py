@@ -26,6 +26,8 @@ class DPGfD(TQC):
         buffer_size = model_kwargs["buffer_size"]
         self.max_demo_ratio = model_kwargs["max_demo_ratio"]
         del model_kwargs["max_demo_ratio"]
+        self.reach_zero = model_kwargs["reach_zero"]
+        del model_kwargs["reach_zero"]
         super(DPGfD, self).__init__("MultiInputPolicy", env, **model_kwargs, device="cuda")
         self.replay_buffer = HinDRLReplayBuffer(demonstration_hdf5, env, n_sampled_goal=0,
                                                 max_episode_length=env.envs[0].horizon, device="cuda",
@@ -146,7 +148,7 @@ class DPGfD(TQC):
         if len(ent_coef_losses) > 0:
             self.logger.record("train/ent_coef_loss", np.mean(ent_coef_losses))
 
-        demo_to_rollout_ratio = min([self.max_demo_ratio, self.buffer_size / self.num_timesteps * self.max_demo_ratio])
+        demo_to_rollout_ratio = max([self.max_demo_ratio * (1 - self.num_timesteps / self.reach_zero), 0])
         self.replay_buffer.demo_to_roullout_sample_ratio = demo_to_rollout_ratio
 
 
@@ -204,11 +206,12 @@ if __name__ == '__main__':
                 "expert_policy": ParameterizedReachDemonstrationPolicy(),
                 "model_kwargs": {"batch_size": 8192,
                                  "learning_rate": 1e-3,
-                                 "lambda_bc": 10,
+                                 "lambda_bc": 1,
                                  "policy_kwargs": {"net_arch": [64, 64]},
-                                 "learning_starts": 10000,
+                                 "learning_starts": 5000,
                                  "buffer_size": int(1e5),
-                                 "max_demo_ratio": 0.4
+                                 "max_demo_ratio": 0.2,
+                                 "reach_zero": 3e5,
                                  }},
                {"env_kwargs": {"number_of_waypoints": 2,
                                "horizon": 200},
@@ -218,12 +221,13 @@ if __name__ == '__main__':
                 "demo_path": "/home/mark/tum/2022ss/thesis/master_thesis/demonstration/collection/ParameterizedReach_2Waypoint/1000_1658869650_9963062/demo.hdf5",
                 "expert_policy": ParameterizedReachDemonstrationPolicy(),
                 "model_kwargs": {"batch_size": 8192,
-                                 "learning_rate": 1e-3,
-                                 "lambda_bc": 10,
-                                 "policy_kwargs": {"net_arch": [32, 32]},
-                                 "learning_starts": 10000,
+                                 "learning_rate": 1e-2,
+                                 "lambda_bc": 1,
+                                 "policy_kwargs": {"net_arch": [64, 64]},
+                                 "learning_starts": 5000,
                                  "buffer_size": int(1e5),
-                                 "max_demo_ratio": 0.4
+                                 "max_demo_ratio": 0.2,
+                                 "reach_zero": 3e5,
                                  }}
                ]
 

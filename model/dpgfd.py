@@ -7,31 +7,40 @@ from sb3_contrib import TQC
 from sb3_contrib.common.utils import quantile_huber_loss
 from stable_baselines3.common.callbacks import EvalCallback, CallbackList
 from stable_baselines3.common.env_util import make_vec_env
+from stable_baselines3.common.evaluation import evaluate_policy
 from stable_baselines3.common.monitor import Monitor
-from stable_baselines3.common.utils import polyak_update, safe_mean
+from stable_baselines3.common.utils import polyak_update
 
 from demonstration.policies.parameterized_reach.policy import ParameterizedReachDemonstrationPolicy
 from env.parameterized_reach import ParameterizedReachEnv
 from eval import EvalVideoCallback
 from model.hindrl_buffer import HinDRLReplayBuffer
 from train import _collect_demonstration
-from utils import create_log_dir, save_dict
+from utils import create_log_dir, save_dict, run_success_rate_eval
 
 
 class DPGfD(TQC):
-    def __init__(self, demonstration_hdf5, env, model_kwargs):
+    def __init__(self, demonstration_hdf5=None, env=None, model_kwargs=None, policy="MultiInputPolicy", device="cuda",
+                 _init_setup_model=False):
+        if _init_setup_model is not False:
+            raise NotImplementedError
 
-        self.lambda_bc = model_kwargs["lambda_bc"]
-        del model_kwargs["lambda_bc"]
-        buffer_size = model_kwargs["buffer_size"]
-        self.max_demo_ratio = model_kwargs["max_demo_ratio"]
-        del model_kwargs["max_demo_ratio"]
-        self.reach_zero = model_kwargs["reach_zero"]
-        del model_kwargs["reach_zero"]
-        super(DPGfD, self).__init__("MultiInputPolicy", env, **model_kwargs, device="cuda")
-        self.replay_buffer = HinDRLReplayBuffer(demonstration_hdf5, env, n_sampled_goal=0,
-                                                max_episode_length=env.envs[0].horizon, device="cuda",
-                                                buffer_size=int(buffer_size))
+        if type(policy) is not str:
+            # reloading from checkpoint without replay buffer
+            super(DPGfD, self).__init__(policy, env, device=device)
+        else:
+            # normal init
+            self.lambda_bc = model_kwargs["lambda_bc"]
+            del model_kwargs["lambda_bc"]
+            buffer_size = model_kwargs["buffer_size"]
+            self.max_demo_ratio = model_kwargs["max_demo_ratio"]
+            del model_kwargs["max_demo_ratio"]
+            self.reach_zero = model_kwargs["reach_zero"]
+            del model_kwargs["reach_zero"]
+            super(DPGfD, self).__init__(policy, env, **model_kwargs, device=device)
+            self.replay_buffer = HinDRLReplayBuffer(demonstration_hdf5, env, n_sampled_goal=0,
+                                                    max_episode_length=env.envs[0].horizon, device="cuda",
+                                                    buffer_size=int(buffer_size))
         print("k")
 
 
@@ -148,7 +157,7 @@ class DPGfD(TQC):
         if len(ent_coef_losses) > 0:
             self.logger.record("train/ent_coef_loss", np.mean(ent_coef_losses))
 
-        demo_to_rollout_ratio = max([self.max_demo_ratio * (1 - self.num_timesteps / self.reach_zero), 0])
+        demo_to_rollout_ratio = self.max_demo_ratio
         self.replay_buffer.demo_to_roullout_sample_ratio = demo_to_rollout_ratio
 
 
@@ -179,15 +188,14 @@ def train(_config):
     eval_path = os.path.join(log_dir, 'train_eval')
 
     video_callback = EvalVideoCallback(eval_env, best_model_save_path=eval_path,
-                                       log_path=eval_path, eval_freq=10000,
+                                       log_path=eval_path, eval_freq=50000,
                                        deterministic=True, render=False)
     eval_callback = EvalCallback(eval_env, best_model_save_path=eval_path,
-                                 log_path=eval_path, eval_freq=1000, n_eval_episodes=10, deterministic=True,
+                                 log_path=eval_path, eval_freq=50000, n_eval_episodes=100, deterministic=True,
                                  render=False)
     eval_callbacks = CallbackList([video_callback, eval_callback])
 
     model.learn(50000000, callback=eval_callbacks)
-
 
 def run_parallel(_configs):
     pool = Pool(processes=len(_configs))
@@ -226,8 +234,8 @@ if __name__ == '__main__':
                                  "policy_kwargs": {"net_arch": [64, 64]},
                                  "learning_starts": 5000,
                                  "buffer_size": int(1e5),
-                                 "max_demo_ratio": 0.2,
-                                 "reach_zero": 3e5,
+                                 "max_demo_ratio": 0.025,
+                                 "reach_zero": 1e6,
                                  }},
                {"env_kwargs": {"number_of_waypoints": 2,
                                "horizon": 200},
@@ -237,15 +245,16 @@ if __name__ == '__main__':
                 "demo_path": "/home/mark/tum/2022ss/thesis/master_thesis/demonstration/collection/ParameterizedReach_2Waypoint/1000_1658869650_9963062/demo.hdf5",
                 "expert_policy": ParameterizedReachDemonstrationPolicy(),
                 "model_kwargs": {"batch_size": 8192,
-                                 "learning_rate": 1e-2,
-                                 "lambda_bc": 1,
+                                 "learning_rate": 1e-3,
+                                 "lambda_bc": 0.5,
                                  "policy_kwargs": {"net_arch": [64, 64]},
                                  "learning_starts": 5000,
                                  "buffer_size": int(1e5),
-                                 "max_demo_ratio": 0.2,
-                                 "reach_zero": 3e5,
+                                 "max_demo_ratio": 0.05,
+                                 "reach_zero": 1e6,
                                  }}
                ]
 
-    run_parallel(configs)
-    # train(configs[1])
+    # run_parallel(configs)
+    train(configs[0])
+    # load_and_eval("/home/mark/tum/2022ss/thesis/master_thesis/training_logs/ParameterizedReach_2Waypoint_279")

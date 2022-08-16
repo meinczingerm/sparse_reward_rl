@@ -196,6 +196,22 @@ def run_parallel(_configs):
     # function and list_ranges as arguments
     pool.map(train, _configs)
 
+
+def load_and_eval(log_dir, eval_episodes=100):
+    checkpoint_path = os.path.join(log_dir, "train_eval", "best_model.zip")
+    env = ParameterizedReachEnv(number_of_waypoints=2, horizon=200)
+
+    model = DPGfD.load(checkpoint_path, env=env)
+
+    rewards, ep_lengths = evaluate_policy(model, env, n_eval_episodes=eval_episodes, return_episode_rewards=True)
+
+    eval_result = {"mean_length": sum(ep_lengths)/len(ep_lengths),
+                   "success_rate": sum(rewards)/len(rewards),
+                   "n_eval_episodes": eval_episodes}
+    save_dict(eval_result, os.path.join(log_dir, "eval_result2.json"))
+
+
+
 if __name__ == '__main__':
     configs = [{"env_kwargs": {"number_of_waypoints": 2,
                                "horizon": 200},

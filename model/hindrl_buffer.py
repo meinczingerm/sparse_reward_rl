@@ -24,10 +24,10 @@ class DemoDictReplayBufferSamples(NamedTuple):
 
 
 class HinDRLReplayBuffer(HerReplayBuffer):
-    def __init__(self, demonstration_hdf5, env, replay_strategy="uniform_demonstration",
+    def __init__(self, demonstration_hdf5, env, goal_selection_strategy="uniform_demonstration", demo_to_rollout_ratio=0.025,
                  buffer_size=int(1e5), **kwargs):
         self.demonstration_hdf5 = demonstration_hdf5
-        self.replay_strategy = replay_strategy
+        self.goal_selection_strategy = goal_selection_strategy
 
         self.demonstrations = {"actions": [],
                                "observations": [],
@@ -64,15 +64,15 @@ class HinDRLReplayBuffer(HerReplayBuffer):
             for key, buffer_item in self._buffer.items()
         }
         self._load_demonstrations_to_buffer()
-        self.demo_to_roullout_sample_ratio = 0.5
+        self.demo_to_rollout_sample_ratio = demo_to_rollout_ratio
 
 
     def sample_goals(self, episode_indices: np.ndarray, her_indices: np.ndarray, transitions_indices: np.ndarray,
     ) -> np.ndarray:
-        if self.replay_strategy == "uniform_demonstration":
+        if self.goal_selection_strategy == "uniform_demonstration":
             return self._sample_uniform_demonstration_goals(num_of_goals=her_indices.shape[0])
         else:
-            raise NotImplementedError
+            return super().sample_goals(episode_indices, her_indices, transitions_indices)
 
     def _sample_uniform_demonstration_goals(self, num_of_goals: int):
         """
@@ -179,7 +179,7 @@ class HinDRLReplayBuffer(HerReplayBuffer):
         :return: Samples.
         """
         # Select which episodes to use
-        batch_size_from_demo = int(self.demo_to_roullout_sample_ratio * batch_size)
+        batch_size_from_demo = int(self.demo_to_rollout_sample_ratio * batch_size)
         batch_size_from_rollout = batch_size - batch_size_from_demo
         if online_sampling:
             assert batch_size is not None, "No batch_size specified for online sampling of HER transitions"

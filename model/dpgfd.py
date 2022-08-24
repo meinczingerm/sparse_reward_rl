@@ -16,7 +16,7 @@ from env.parameterized_reach import ParameterizedReachEnv
 from eval import EvalVideoCallback
 from model.hindrl_buffer import HinDRLReplayBuffer
 from train import _collect_demonstration
-from utils import create_log_dir, save_dict, run_success_rate_eval
+from utils import create_log_dir, save_dict
 
 
 class DPGfD(TQC):
@@ -37,11 +37,17 @@ class DPGfD(TQC):
             del model_kwargs["max_demo_ratio"]
             self.reach_zero = model_kwargs["reach_zero"]
             del model_kwargs["reach_zero"]
+            goal_selection_strategy = model_kwargs["goal_selection_strategy"]
+            del model_kwargs["goal_selection_strategy"]
+            n_sampled_goal = model_kwargs["n_sampled_goal"]
+            del model_kwargs["n_sampled_goal"]
+
             super(DPGfD, self).__init__(policy, env, **model_kwargs, device=device)
-            self.replay_buffer = HinDRLReplayBuffer(demonstration_hdf5, env, n_sampled_goal=0,
+            self.replay_buffer = HinDRLReplayBuffer(demonstration_hdf5, env, n_sampled_goal=n_sampled_goal,
                                                     max_episode_length=env.envs[0].horizon, device="cuda",
-                                                    buffer_size=int(buffer_size))
-        print("k")
+                                                    buffer_size=int(buffer_size),
+                                                    goal_selection_strategy=goal_selection_strategy)
+        print("Model initialized")
 
 
     def train(self, gradient_steps: int, batch_size: int = 64) -> None:
@@ -157,8 +163,8 @@ class DPGfD(TQC):
         if len(ent_coef_losses) > 0:
             self.logger.record("train/ent_coef_loss", np.mean(ent_coef_losses))
 
-        demo_to_rollout_ratio = self.max_demo_ratio
-        self.replay_buffer.demo_to_roullout_sample_ratio = demo_to_rollout_ratio
+        demo_to_rollout_ratio = max([self.max_demo_ratio * (1 - self.num_timesteps / self.reach_zero), 0])
+        self.replay_buffer.demo_to_rollout_sample_ratio = demo_to_rollout_ratio
 
 
 def train(_config):
@@ -191,7 +197,7 @@ def train(_config):
                                        log_path=eval_path, eval_freq=50000,
                                        deterministic=True, render=False)
     eval_callback = EvalCallback(eval_env, best_model_save_path=eval_path,
-                                 log_path=eval_path, eval_freq=50000, n_eval_episodes=100, deterministic=True,
+                                 log_path=eval_path, eval_freq=10000, n_eval_episodes=50, deterministic=True,
                                  render=False)
     eval_callbacks = CallbackList([video_callback, eval_callback])
 
@@ -233,9 +239,12 @@ if __name__ == '__main__':
                                  "lambda_bc": 1,
                                  "policy_kwargs": {"net_arch": [64, 64]},
                                  "learning_starts": 5000,
-                                 "buffer_size": int(1e5),
-                                 "max_demo_ratio": 0.025,
-                                 "reach_zero": 1e6,
+                                 "buffer_size": int(1e6),
+                                 "max_demo_ratio": 0.01,
+                                 "reach_zero": 5e5,
+                                 "n_sampled_goal": 0,
+                                 "goal_selection_strategy": None,
+                                 "tau": 0.005,
                                  }},
                {"env_kwargs": {"number_of_waypoints": 2,
                                "horizon": 200},
@@ -246,15 +255,18 @@ if __name__ == '__main__':
                 "expert_policy": ParameterizedReachDemonstrationPolicy(),
                 "model_kwargs": {"batch_size": 8192,
                                  "learning_rate": 1e-3,
-                                 "lambda_bc": 0.5,
+                                 "lambda_bc": 1,
                                  "policy_kwargs": {"net_arch": [64, 64]},
                                  "learning_starts": 5000,
-                                 "buffer_size": int(1e5),
-                                 "max_demo_ratio": 0.05,
-                                 "reach_zero": 1e6,
-                                 }}
+                                 "buffer_size": int(1e6),
+                                 "max_demo_ratio": 0.025,
+                                 "reach_zero": 5e5,
+                                 "n_sampled_goal": 0,
+                                 "goal_selection_strategy": None,
+                                 "tau": 0.005,
+                                 }},
                ]
 
-    # run_parallel(configs)
-    train(configs[0])
+    run_parallel(configs)
+    # train(configs[0])
     # load_and_eval("/home/mark/tum/2022ss/thesis/master_thesis/training_logs/ParameterizedReach_2Waypoint_279")

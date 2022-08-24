@@ -2,8 +2,8 @@ import h5py
 import numpy as np
 from robosuite import load_controller_config
 
-from env.cable_insertion import CableInsertionEnv
-from env.cable_manipulation_base import CableManipulationBase
+from env.robot_envs.cable_insertion import CableInsertionEnv
+from env.robot_envs.cable_manipulation_base import CableManipulationBase
 
 
 class ReplayedJointVelPolicy:

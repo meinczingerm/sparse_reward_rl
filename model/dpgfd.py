@@ -12,7 +12,7 @@ from stable_baselines3.common.monitor import Monitor
 from stable_baselines3.common.utils import polyak_update
 
 from demonstration.policies.parameterized_reach.policy import ParameterizedReachDemonstrationPolicy
-from env.parameterized_reach import ParameterizedReachEnv
+from env.robot_envs.parameterized_reach import ParameterizedReachEnv
 from eval import EvalVideoCallback
 from model.hindrl_buffer import HinDRLReplayBuffer
 from train import _collect_demonstration

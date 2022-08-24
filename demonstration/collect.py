@@ -14,15 +14,9 @@ from glob import glob
 import h5py
 import numpy as np
 import robosuite as suite
-from robosuite import load_controller_config
-from robosuite.utils.camera_utils import DemoPlaybackCameraMover
-from robosuite.wrappers import DataCollectionWrapper, VisualizationWrapper
+from robosuite.wrappers import VisualizationWrapper
 
-from demonstration.inverse_kinematic_policy import IKDemonstrationPolicy
 from demonstration.observation_collection_wrapper import ObservationCollectionWrapper
-from demonstration.policy import DemonstrationPolicy
-from env.cable_manipulation_base import CableManipulationBase
-from env.cable_insertion import CableInsertionEnv
 from utils import get_project_root_path
 
 

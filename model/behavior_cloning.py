@@ -6,14 +6,13 @@ import pytorch_lightning as pl
 import torch
 from pytorch_lightning.loggers import TensorBoardLogger
 from sb3_contrib import TQC
-from sb3_contrib.tqc.policies import Actor
 from stable_baselines3.common.evaluation import evaluate_policy
 from stable_baselines3.common.vec_env import VecEnv, DummyVecEnv
 from torch import nn, optim
 from torch.utils.data import Dataset, DataLoader
 
 from demonstration.policies.parameterized_reach.policy import ParameterizedReachDemonstrationPolicy
-from env.parameterized_reach import ParameterizedReachEnv
+from env.robot_envs.parameterized_reach import ParameterizedReachEnv
 from train import _collect_demonstration
 from utils import get_project_root_path, save_result_gif, save_dict
 

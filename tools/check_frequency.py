@@ -4,7 +4,7 @@ from pathlib import Path
 import h5py
 import numpy as np
 
-from env.parameterized_reach import ParameterizedReachEnv
+from env.robot_envs.parameterized_reach import ParameterizedReachEnv
 from demonstration.policies.parameterized_reach.policy import ParameterizedReachDemonstrationPolicy
 from train import _collect_demonstration
 

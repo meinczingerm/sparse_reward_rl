@@ -1,26 +1,16 @@
 import os
-import warnings
 from multiprocessing import Pool
 
-import torch.autograd
-from robosuite import load_controller_config
-from sb3_contrib import TQC
-from sb3_contrib.common.wrappers import TimeFeatureWrapper
 from stable_baselines3 import HerReplayBuffer
 from stable_baselines3.common.callbacks import EvalCallback, CallbackList
 from stable_baselines3.common.env_util import make_vec_env
 from stable_baselines3.common.monitor import Monitor
 
 from demonstration.collect import collect_demonstrations
-from demonstration.policies.bring_near.bring_near_policy import BringNearDemonstrationPolicy
-from demonstration.policies.parameterized_reach.policy import ParameterizedReachDemonstrationPolicy
-from env.bring_near import BringNearEnv
-from env.cable_manipulation_base import CableManipulationBase
-from env.goal_handler import HinDRLGoalHandler
-from env.parameterized_reach import ParameterizedReachEnv
 from eval import EvalVideoCallback
 from model.hindrl_buffer import HinDRLReplayBuffer
-from utils import create_log_dir, save_dict, get_baseline_model_with_name, get_controller_config
+from utils import create_log_dir, save_dict
+
 
 # configs = [{
 #     "demonstration_hdf5": "/home/mark/tum/2022ss/thesis/master_thesis/demonstration/collection/ParameterizedReach_2Waypoint/1656412922_273637/demo.hdf5",

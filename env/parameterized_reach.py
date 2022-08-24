@@ -43,7 +43,7 @@ class ParameterizedReachEnv(SingleArmEnv):
         render_collision_mesh=False,
         render_visual_mesh=True,
         render_gpu_device_id=-1,
-        control_freq=20,
+        control_freq=10,
         horizon=1000,
         ignore_done=False,
         hard_reset=True,
@@ -146,7 +146,7 @@ class ParameterizedReachEnv(SingleArmEnv):
             picture = self.sim.render(camera_name='frontview', width=500, height=500)
             return np.flip(picture, axis=0)
         else:
-            return super(ParameterizedReachEnv, self).render(mode)
+            return super(ParameterizedReachEnv, self).render()
 
     # Quickfix for issue: https://github.com/ARISE-Initiative/robosuite/issues/321
     @property
@@ -255,6 +255,8 @@ class ParameterizedReachEnv(SingleArmEnv):
         axis_angle_dist = np.linalg.norm(achieved_axis_angle - goal_axis_angle, axis=1)
         reward = np.logical_and((pos_dist < self.success_pos_dist_limit),
                                 (axis_angle_dist < self.success_angle_dist_limit)).astype(float)
+
+        # reward = self.goal_handler.compute_reward(achieved_goal, goal, info)
         return reward
 
 

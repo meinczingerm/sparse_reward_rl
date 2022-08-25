@@ -29,6 +29,7 @@ class GridPickAndPlace(gym.Env):
              for i in range(self.number_of_objects)}
         obs_spaces_dict["dist_agent_to_goal"] = spaces.Box(0, size - 1, shape=(2,), dtype=int)
         obs_spaces_dict["object_transported"] = spaces.MultiBinary(self.number_of_objects)
+        obs_spaces_dict["object_grabbed"] = spaces.MultiBinary(self.number_of_objects)
         self.observation_space = spaces.Dict(
             obs_spaces_dict
         )
@@ -64,7 +65,6 @@ class GridPickAndPlace(gym.Env):
 
         self._state["agent_pos"], used_positions = self._sample_from_not_used_position(available_space, used_positions)
         self._state["goal_pos"], used_positions = self._sample_from_not_used_position(available_space, used_positions)
-        self._state["object_transported"] = np.zeros(self.number_of_objects)
         self._state["grabbed_object"] = None
         self._state["next_object_to_transport"] = 0
 
@@ -141,11 +141,18 @@ class GridPickAndPlace(gym.Env):
         obs = {f"dist_agent_to_object_{i}": self._state[f"object_{i}_pos"] - self._state["agent_pos"]
                for i in range(self.number_of_objects)}
         obs["agent_to_goal"] = self._state["goal_pos"] - self._state["agent_pos"]
-        obs["object_transported"] = self._state["object_transported"]
+        obs["object_transported"] = np.zeros(self.number_of_objects)
+        obs["object_transported"][:self._state["next_object_to_transport"]] = 1
+        obs["object_grabbed"] = np.zeros(self.number_of_objects)
+        if self._state["grabbed_object"] is not None:
+            obs["object_grabbed"][self._state["grabbed_object"]] = 1
         return obs
 
     def _get_info(self):
         return None
+
+    def render(self, mode="human"):
+        self._render_frame(mode)
 
     def _render_frame(self, mode: str):
         # This will be the function called by the Renderer to collect a single frame.
@@ -231,7 +238,7 @@ class GridPickAndPlace(gym.Env):
 
 
 if __name__ == '__main__':
-    env = GridPickAndPlace(render_mode="human")
+    env = GridPickAndPlace(render_mode="human", size=10, number_of_objects=5)
     action = env.action_space.sample()
     while True:
         observation, reward, done, info = env.step(action)

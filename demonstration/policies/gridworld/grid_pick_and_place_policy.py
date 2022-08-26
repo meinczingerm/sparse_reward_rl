@@ -24,6 +24,7 @@ class GridPickAndPlacePolicy:
         :param observation: observation from the env
         :return: action (np.array) for the robotarm
         """
+        observation = self.convert_observation_to_dict(observation["observation"])
         next_object_to_transport = np.where(observation["object_transported"] == 0)[0][0]
         grabbed_object = np.where(observation["object_grabbed"] == 1)[0]
         if grabbed_object.shape[0] == 0:
@@ -54,7 +55,9 @@ class GridPickAndPlacePolicy:
                 movement = self.random_movement()
                 movement_action = self.get_action_from_movement(movement)
 
-        return np.array([movement_action, grab_action])
+        hot_encoded_movement = np.zeros(4)
+        hot_encoded_movement[movement_action] = 1
+        return np.hstack([hot_encoded_movement, grab_action])
 
     def reset(self):
         pass
@@ -93,6 +96,28 @@ class GridPickAndPlacePolicy:
         for key, value in self._action_to_direction.items():
             if np.allclose(value, movement):
                 return key
+
+    def convert_observation_to_dict(self, observation):
+        """
+        Reverting the _get_obs() function numpy.hstack step.
+        :param observation: stacked observation array
+        :return: observation as dict
+        """
+        number_of_objects = int((observation.shape[0] - 2) / 4)
+        obs = {}
+        slice_index = 0
+        for i in range(number_of_objects):
+            obs[f"dist_agent_to_object_{i}"] = observation[slice_index: slice_index + 2]
+            slice_index += 2
+        obs["agent_to_goal"] = observation[slice_index: slice_index + 2]
+        slice_index += 2
+        obs["object_transported"] = observation[slice_index: slice_index + number_of_objects]
+        slice_index += number_of_objects
+        obs["object_grabbed"] = observation[slice_index:]
+
+        assert np.allclose(observation, np.hstack([value if value is not None else -1 for value in obs.values()]))
+
+        return obs
 
 if __name__ == '__main__':
     env = GridPickAndPlace(render_mode="human")

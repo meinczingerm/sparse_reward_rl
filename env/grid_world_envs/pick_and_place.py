@@ -131,7 +131,7 @@ class GridPickAndPlace(gym.Env):
         reward = 0
         move = action[:-1]
         direction = self._action_to_direction[int(np.argmax(move))]
-        grab = action[-1]
+        grab = action[-1] > 0.5
         # We use `np.clip` to make sure we don't leave the grid
         last_agent_pos = self._state["agent_pos"]
         self._state["agent_pos"] = np.clip(

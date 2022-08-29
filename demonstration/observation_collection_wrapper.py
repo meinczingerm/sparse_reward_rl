@@ -21,6 +21,7 @@ class RobosuiteObservationCollectionWrapper(DataCollectionWrapper):
                 - (bool) whether the current episode is completed or not
                 - (dict) misc information
         """
+        raise Warning("Check whether action and observation is not shifted from each other")
         ret = super(DataCollectionWrapper, self).step(action)
         self.t += 1
 
@@ -66,6 +67,7 @@ class GridWorldDataCollectionWrapper(RobosuiteObservationCollectionWrapper):
         # in-memory cache for simulation states and action info
         self.states = []
         self.action_infos = []  # stores information about actions taken
+        self.last_obs = 0
 
         # how often to save simulation state, in terms of environment steps
         self.collect_freq = collect_freq
@@ -93,7 +95,7 @@ class GridWorldDataCollectionWrapper(RobosuiteObservationCollectionWrapper):
             self._flush()
 
         # timesteps in current episode
-        self.t = 0
+        self.t = -1
         self.has_interaction = False
 
         self.env.reset()
@@ -167,18 +169,19 @@ class GridWorldDataCollectionWrapper(RobosuiteObservationCollectionWrapper):
                 - (bool) whether the current episode is completed or not
                 - (dict) misc information
         """
-
         observation, reward, done, info = self.env.step(action)
         if not self.has_interaction:
             self._on_first_interaction()
 
+        self.last_obs = observation["observation"]
+
         # collect the current simulation state if necessary
-        if self.t % self.collect_freq == 0:
+        if self.t % self.collect_freq == 0 and self.t >= 0:
             self.states.append(self.env.get_state())
 
             info = {}
-            info["actions"] = np.array(action)
-            info["observation"] = observation["observation"]
+            info["actions"] = action
+            info["observation"] = self.last_obs
             if "desired_goal" in observation.keys():
                 info["desired_goal"] = observation["desired_goal"]
             self.action_infos.append(info)
@@ -186,5 +189,9 @@ class GridWorldDataCollectionWrapper(RobosuiteObservationCollectionWrapper):
         # flush collected data to disk if necessary
         if self.t % self.flush_freq == 0:
             self._flush()
+
+
+        self.t += 1
+
 
         return observation, reward, done, info

@@ -67,7 +67,7 @@ class GridWorldDataCollectionWrapper(RobosuiteObservationCollectionWrapper):
         # in-memory cache for simulation states and action info
         self.states = []
         self.action_infos = []  # stores information about actions taken
-        self.last_obs = 0
+        self.last_obs = None
 
         # how often to save simulation state, in terms of environment steps
         self.collect_freq = collect_freq
@@ -123,6 +123,7 @@ class GridWorldDataCollectionWrapper(RobosuiteObservationCollectionWrapper):
         # save initial state and action
         assert len(self.states) == 0
         self.states.append(self.env.get_state())
+        self.last_obs = None
 
     def _flush(self):
         """
@@ -173,18 +174,18 @@ class GridWorldDataCollectionWrapper(RobosuiteObservationCollectionWrapper):
         if not self.has_interaction:
             self._on_first_interaction()
 
-        self.last_obs = observation["observation"]
-
         # collect the current simulation state if necessary
-        if self.t % self.collect_freq == 0 and self.t >= 0:
-            self.states.append(self.env.get_state())
+        if self.t % self.collect_freq == 0:
+            if self.t >= 0:
+                self.states.append(self.env.get_state())
 
-            info = {}
-            info["actions"] = action
-            info["observation"] = self.last_obs
-            if "desired_goal" in observation.keys():
-                info["desired_goal"] = observation["desired_goal"]
-            self.action_infos.append(info)
+                info = {}
+                info["actions"] = action
+                info["observation"] = self.last_obs
+                if "desired_goal" in observation.keys():
+                    info["desired_goal"] = observation["desired_goal"]
+                self.action_infos.append(info)
+            self.last_obs = observation["observation"]
 
         # flush collected data to disk if necessary
         if self.t % self.flush_freq == 0:

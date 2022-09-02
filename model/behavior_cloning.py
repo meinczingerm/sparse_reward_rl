@@ -14,7 +14,7 @@ from torch.utils.data import Dataset, DataLoader
 
 from demonstration.policies.gridworld.grid_pick_and_place_policy import GridPickAndPlacePolicy
 from demonstration.policies.parameterized_reach.policy import ParameterizedReachDemonstrationPolicy
-from env.grid_world_envs.pick_and_place import GridPickAndPlace, GridWorldPolicyActionWrapper
+from env.grid_world_envs.pick_and_place import GridPickAndPlace
 from env.robot_envs.parameterized_reach import ParameterizedReachEnv
 from train import _collect_demonstration
 from utils import get_project_root_path, save_result_gif, save_dict
@@ -79,10 +79,11 @@ class BCModule(pl.LightningModule):
         self.log("validation_loss", loss)
 
     def validation_epoch_end(self, *args) -> None:
-        rewards, _ = evaluate_policy(self.model, self.eval_env, n_eval_episodes=20,
+        rewards, lengths = evaluate_policy(self.model, self.eval_env, n_eval_episodes=20,
                                                   return_episode_rewards=True, deterministic=True)
         success_rate = sum(rewards)/len(rewards)
-        self.log("env_success_rate", success_rate)
+        self.log("eval/mean_reward", success_rate)
+        self.log("eval/mean_ep_length", sum(lengths)/len(lengths))
 
     def configure_optimizers(self):
         optimizer = optim.Adam(self.parameters(), **self.optimizer_kwargs)
@@ -167,7 +168,7 @@ if __name__ == '__main__':
     #                                          "weight_decay": 1e-4}}}
 
     configs = [{"env_kwargs": {"size": 10,
-                               "number_of_objects": 3,
+                               "number_of_objects": 2,
                                "horizon": 50},
                 "env_class": GridPickAndPlace,
                 "number_of_demonstrations": 10000,
@@ -178,7 +179,7 @@ if __name__ == '__main__':
                 "use_policy_wrapper": False,
                 "model": {"batch_size": 2048,
                           "policy_kwargs": {"net_arch": [32, 32]},
-                          "optimizer_kwargs": {"lr": 1e-4}}
+                          "optimizer_kwargs": {"lr": 1e-3}}
                 }
                ]
 

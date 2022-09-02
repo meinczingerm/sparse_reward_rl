@@ -43,13 +43,16 @@ class DPGfD(TQC):
             del model_kwargs["goal_selection_strategy"]
             n_sampled_goal = model_kwargs["n_sampled_goal"]
             del model_kwargs["n_sampled_goal"]
+            model_id = model_kwargs.get("model_id", -1)
+            if "model_id" in model_kwargs.keys():
+                del model_kwargs["model_id"]
 
             super(DPGfD, self).__init__(policy, env, **model_kwargs, device=device)
             self.replay_buffer = HinDRLReplayBuffer(demonstration_hdf5, env, n_sampled_goal=n_sampled_goal,
                                                     max_episode_length=env.envs[0].horizon, device="cuda",
                                                     buffer_size=int(buffer_size),
                                                     goal_selection_strategy=goal_selection_strategy)
-        print("Model initialized")
+        print(f"Model initialized {model_id}")
 
 
     def train(self, gradient_steps: int, batch_size: int = 64) -> None:
@@ -201,7 +204,7 @@ def train(_config):
     #                                    log_path=eval_path, eval_freq=50000,
     #                                    deterministic=True, render=False)
     eval_callback = EvalCallback(eval_env, best_model_save_path=eval_path,
-                                 log_path=eval_path, eval_freq=10000, n_eval_episodes=50, deterministic=True,
+                                 log_path=eval_path, eval_freq=10000, n_eval_episodes=50, deterministic=False,
                                  render=False)
     eval_callbacks = CallbackList([eval_callback])
 

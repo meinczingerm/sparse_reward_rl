@@ -1,11 +1,10 @@
-import time
 from typing import Optional
 
 import gym
 import numpy as np
 from gym import spaces
 
-from env.robot_envs.goal_handler import HinDRLGoalHandler
+from env.goal_handler import HinDRLGoalHandler
 
 KEY_TO_ACTION = {
     "d": np.array([1, 0, 0, 0]),

@@ -18,11 +18,13 @@ class HinDRLGoalHandler:
         :param k: k parameter used for calculating the goal conditioned reward threshold epsilon
                     (more info appendix A.8, https://arxiv.org/pdf/2112.00597.pdf)
         """
+        self.epsilon_params = {"m": m, "k": k}
         demonstrations = []
         with h5py.File(demonstration_hdf5, "r") as f:
             for demo_id in f["data"].keys():
                 demonstrations.append(np.array(f["data"][demo_id]["observations"]))
 
+        self.demonstrations = demonstrations
         self.goal_buffer = [demo[-1] for demo in demonstrations]
         self.epsilon = self._calc_epsilon(demonstrations, m, k)
 

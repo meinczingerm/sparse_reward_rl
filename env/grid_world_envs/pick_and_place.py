@@ -5,6 +5,8 @@ import gym
 import numpy as np
 from gym import spaces
 
+from env.robot_envs.goal_handler import HinDRLGoalHandler
+
 KEY_TO_ACTION = {
     "d": np.array([1, 0, 0, 0]),
     "s": np.array([0, 1, 0, 0]),
@@ -16,7 +18,8 @@ class GridPickAndPlace(gym.Env):
     metadata = {"render_modes": ["human", "rgb_array", "single_rgb_array"], "render_fps": 4}
     name = "GridPickAndPlace"
 
-    def __init__(self, number_of_objects=3, render_mode: Optional[str] = None, size: int = 5, horizon=100):
+    def __init__(self, number_of_objects=3, render_mode: Optional[str] = None, size: int = 5, horizon=100,
+                 goal_handler: HinDRLGoalHandler = None):
         assert render_mode is None or render_mode in self.metadata["render_modes"]
         self.render_mode = render_mode  # Define the attribute render_mode in your environment
         self.number_of_objects = number_of_objects
@@ -26,6 +29,8 @@ class GridPickAndPlace(gym.Env):
         self.window_size = 512  # The size of the PyGame window
         self.horizon = horizon
         self.t = 0
+
+        self.goal_handler = goal_handler  # necessary for HER compute_reward, for all other model could be skipped
 
         # All Robotic env uses engineered encoding, it would make sense there to change that behaviour
         # for this env engineered encoding is completely fine, experiments could still be interesting...
@@ -83,6 +88,19 @@ class GridPickAndPlace(gym.Env):
             pygame.display.init()
             self.window = pygame.display.set_mode((self.window_size, self.window_size))
             self.clock = pygame.time.Clock()
+
+    def compute_reward(self, achieved_goal, goal, _info):
+        """
+        Calculates the reward given the achieved_goal and goal. It is used by HER for relabeling.
+        :param achieved_goal: batched
+        :param goal:
+        :param _info:
+        :return:
+        """
+        if self.goal_handler is not None:
+            self.goal_handler.compute_reward(achieved_goal, goal, _info)
+        else:
+            raise NotImplementedError
 
     def reset(self):
         self.t = 0

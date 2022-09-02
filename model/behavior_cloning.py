@@ -1,4 +1,5 @@
 import os.path
+from multiprocessing import Pool
 
 import h5py
 import numpy as np
@@ -6,14 +7,15 @@ import pytorch_lightning as pl
 import torch
 from pytorch_lightning.loggers import TensorBoardLogger
 from sb3_contrib import TQC
-from sb3_contrib.tqc.policies import Actor
 from stable_baselines3.common.evaluation import evaluate_policy
 from stable_baselines3.common.vec_env import VecEnv, DummyVecEnv
 from torch import nn, optim
 from torch.utils.data import Dataset, DataLoader
 
+from demonstration.policies.gridworld.grid_pick_and_place_policy import GridPickAndPlacePolicy
 from demonstration.policies.parameterized_reach.policy import ParameterizedReachDemonstrationPolicy
-from env.parameterized_reach import ParameterizedReachEnv
+from env.grid_world_envs.pick_and_place import GridPickAndPlace
+from env.robot_envs.parameterized_reach import ParameterizedReachEnv
 from train import _collect_demonstration
 from utils import get_project_root_path, save_result_gif, save_dict
 
@@ -77,10 +79,11 @@ class BCModule(pl.LightningModule):
         self.log("validation_loss", loss)
 
     def validation_epoch_end(self, *args) -> None:
-        rewards, _ = evaluate_policy(self.model, self.eval_env, n_eval_episodes=20,
-                                                  return_episode_rewards=True)
+        rewards, lengths = evaluate_policy(self.model, self.eval_env, n_eval_episodes=20,
+                                                  return_episode_rewards=True, deterministic=True)
         success_rate = sum(rewards)/len(rewards)
-        self.log("env_success_rate", success_rate)
+        self.log("eval/mean_reward", success_rate)
+        self.log("eval/mean_ep_length", sum(lengths)/len(lengths))
 
     def configure_optimizers(self):
         optimizer = optim.Adam(self.parameters(), **self.optimizer_kwargs)
@@ -115,9 +118,9 @@ def train_bc(_config):
 
     logger = TensorBoardLogger(os.path.join(get_project_root_path(), "training_logs"),
                                name=f"BC_model_{env.name}")
-    trainer = pl.Trainer(max_epochs=50000, accelerator="gpu", logger=logger, check_val_every_n_epoch=100)
+    trainer = pl.Trainer(max_epochs=50000, accelerator="gpu", logger=logger, check_val_every_n_epoch=5)
     save_dict(_config, os.path.join(trainer.log_dir, "config.json"))
-    eval_env = _config["env_class"](**_config["env_kwargs"], has_offscreen_renderer=True)
+    eval_env = _config["env_class"](**_config["env_kwargs"])  #, has_offscreen_renderer=True)
     if not isinstance(eval_env, VecEnv):
         eval_env = DummyVecEnv([lambda: eval_env])
 
@@ -125,6 +128,13 @@ def train_bc(_config):
     save_result_gif(eval_env, model, trainer.log_dir, "result.gif", 1000)
 
     print("Done")
+
+def run_parallel(_configs):
+    pool = Pool(processes=len(_configs))
+
+    # map the function to the list and pass
+    # function and list_ranges as arguments
+    pool.map(train_bc, _configs)
 
 
 def load_and_eval(log_dir, _config, num_of_eval_videos=5):
@@ -145,19 +155,39 @@ def load_and_eval(log_dir, _config, num_of_eval_videos=5):
 
 
 if __name__ == '__main__':
-    config = {"env_kwargs": {"number_of_waypoints": 2},
-              "env_class": ParameterizedReachEnv,
-              "number_of_demonstrations": 1000,
-              "regenerate_demonstrations": True,
-              "training_demo_path": None,
-              "validation_demo_path": None,
-              "expert_policy": ParameterizedReachDemonstrationPolicy(),
-              "model": {"batch_size": 2048,
-                        "policy_kwargs": {"net_arch": [64, 64]},
-                        "optimizer_kwargs": {"lr": 1e-3,
-                                             "weight_decay": 1e-4}}}
+    # config = {"env_kwargs": {"number_of_waypoints": 2},
+    #           "env_class": ParameterizedReachEnv,
+    #           "number_of_demonstrations": 1000,
+    #           "regenerate_demonstrations": True,
+    #           "training_demo_path": None,
+    #           "validation_demo_path": None,
+    #           "expert_policy": ParameterizedReachDemonstrationPolicy(),
+    #           "model": {"batch_size": 2048,
+    #                     "policy_kwargs": {"net_arch": [64, 64]},
+    #                     "optimizer_kwargs": {"lr": 1e-3,
+    #                                          "weight_decay": 1e-4}}}
 
-    train_bc(config)
+    configs = [{"env_kwargs": {"size": 10,
+                               "number_of_objects": 2,
+                               "horizon": 50},
+                "env_class": GridPickAndPlace,
+                "number_of_demonstrations": 10000,
+                "regenerate_demonstrations": True,
+                "training_demo_path": None,
+                "validation_demo_path": None,
+                "expert_policy": GridPickAndPlacePolicy(random_action_probability=0.2),
+                "use_policy_wrapper": False,
+                "model": {"batch_size": 2048,
+                          "policy_kwargs": {"net_arch": [32, 32]},
+                          "optimizer_kwargs": {"lr": 1e-3}}
+                }
+               ]
+
+    train_bc(configs[0])
+    #
+    # run_parallel(configs)
+
+
 
     # load_and_eval("/home/mark/tum/2022ss/thesis/master_thesis/training_logs/BC_model_ParameterizedReach_2Waypoint/version_2",
     #               config)

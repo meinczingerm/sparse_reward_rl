@@ -11,8 +11,10 @@ from stable_baselines3.common.evaluation import evaluate_policy
 from stable_baselines3.common.monitor import Monitor
 from stable_baselines3.common.utils import polyak_update
 
+from demonstration.policies.gridworld.grid_pick_and_place_policy import GridPickAndPlacePolicy
 from demonstration.policies.parameterized_reach.policy import ParameterizedReachDemonstrationPolicy
-from env.parameterized_reach import ParameterizedReachEnv
+from env.grid_world_envs.pick_and_place import GridPickAndPlace
+from env.robot_envs.parameterized_reach import ParameterizedReachEnv
 from eval import EvalVideoCallback
 from model.hindrl_buffer import HinDRLReplayBuffer
 from train import _collect_demonstration
@@ -41,13 +43,16 @@ class DPGfD(TQC):
             del model_kwargs["goal_selection_strategy"]
             n_sampled_goal = model_kwargs["n_sampled_goal"]
             del model_kwargs["n_sampled_goal"]
+            model_id = model_kwargs.get("model_id", -1)
+            if "model_id" in model_kwargs.keys():
+                del model_kwargs["model_id"]
 
             super(DPGfD, self).__init__(policy, env, **model_kwargs, device=device)
             self.replay_buffer = HinDRLReplayBuffer(demonstration_hdf5, env, n_sampled_goal=n_sampled_goal,
                                                     max_episode_length=env.envs[0].horizon, device="cuda",
                                                     buffer_size=int(buffer_size),
                                                     goal_selection_strategy=goal_selection_strategy)
-        print("Model initialized")
+        print(f"Model initialized {model_id}")
 
 
     def train(self, gradient_steps: int, batch_size: int = 64) -> None:
@@ -168,7 +173,7 @@ class DPGfD(TQC):
 
 
 def train(_config):
-    env = make_vec_env(_config['env_class'], env_kwargs=_config['env_kwargs'])
+    env = make_vec_env(_config['env_class'], env_kwargs=_config['env_kwargs'], n_envs=1)
     if _config["regenerate_demonstrations"]:
         assert _config["demo_path"] is None
         expert_policy = _config["expert_policy"]
@@ -184,22 +189,24 @@ def train(_config):
     model = DPGfD(demo_path, env, _config["model_kwargs"])
 
     eval_env_config = _config['env_kwargs']
-    eval_env_config['has_renderer'] = False
-    eval_env_config['has_offscreen_renderer'] = True
-    eval_env_config['use_camera_obs'] = False
+
+    if not isinstance(env.envs[0].env, GridPickAndPlace):
+        eval_env_config['has_renderer'] = False
+        eval_env_config['has_offscreen_renderer'] = True
+        eval_env_config['use_camera_obs'] = False
     eval_env = Monitor(_config['env_class'](**eval_env_config))
     env.reset()
     eval_env.reset()
     # Use deterministic actions for evaluation
     eval_path = os.path.join(log_dir, 'train_eval')
 
-    video_callback = EvalVideoCallback(eval_env, best_model_save_path=eval_path,
-                                       log_path=eval_path, eval_freq=50000,
-                                       deterministic=True, render=False)
+    # video_callback = EvalVideoCallback(eval_env, best_model_save_path=eval_path,
+    #                                    log_path=eval_path, eval_freq=50000,
+    #                                    deterministic=True, render=False)
     eval_callback = EvalCallback(eval_env, best_model_save_path=eval_path,
-                                 log_path=eval_path, eval_freq=10000, n_eval_episodes=50, deterministic=True,
+                                 log_path=eval_path, eval_freq=10000, n_eval_episodes=50, deterministic=False,
                                  render=False)
-    eval_callbacks = CallbackList([video_callback, eval_callback])
+    eval_callbacks = CallbackList([eval_callback])
 
     model.learn(50000000, callback=eval_callbacks)
 
@@ -227,40 +234,82 @@ def load_and_eval(log_dir, eval_episodes=100):
 
 
 if __name__ == '__main__':
-    configs = [{"env_kwargs": {"number_of_waypoints": 2,
-                               "horizon": 200},
-                "env_class": ParameterizedReachEnv,
+    # configs = [{"env_kwargs": {"number_of_waypoints": 2,
+    #                            "horizon": 200},
+    #             "env_class": ParameterizedReachEnv,
+    #             "number_of_demonstrations": 1000,
+    #             "regenerate_demonstrations": False,
+    #             "demo_path": "/home/mark/tum/2022ss/thesis/master_thesis/demonstration/collection/ParameterizedReach_2Waypoint/1000_1658869650_9963062/demo.hdf5",
+    #             "expert_policy": ParameterizedReachDemonstrationPolicy(),
+    #             "model_kwargs": {"batch_size": 8192,
+    #                              "learning_rate": 1e-3,
+    #                              "lambda_bc": 1,
+    #                              "policy_kwargs": {"net_arch": [64, 64]},
+    #                              "learning_starts": 5000,
+    #                              "buffer_size": int(1e6),
+    #                              "max_demo_ratio": 0.01,
+    #                              "reach_zero": 5e5,
+    #                              "n_sampled_goal": 0,
+    #                              "goal_selection_strategy": None,
+    #                              "tau": 0.005,
+    #                              }},
+    #            {"env_kwargs": {"number_of_waypoints": 2,
+    #                            "horizon": 200},
+    #             "env_class": ParameterizedReachEnv,
+    #             "number_of_demonstrations": 1000,
+    #             "regenerate_demonstrations": False,
+    #             "demo_path": "/home/mark/tum/2022ss/thesis/master_thesis/demonstration/collection/ParameterizedReach_2Waypoint/1000_1658869650_9963062/demo.hdf5",
+    #             "expert_policy": ParameterizedReachDemonstrationPolicy(),
+    #             "model_kwargs": {"batch_size": 8192,
+    #                              "learning_rate": 1e-3,
+    #                              "lambda_bc": 1,
+    #                              "policy_kwargs": {"net_arch": [64, 64]},
+    #                              "learning_starts": 5000,
+    #                              "buffer_size": int(1e6),
+    #                              "max_demo_ratio": 0.025,
+    #                              "reach_zero": 5e5,
+    #                              "n_sampled_goal": 0,
+    #                              "goal_selection_strategy": None,
+    #                              "tau": 0.005,
+    #                              }},
+    #            ]
+
+    configs = [{"env_kwargs": {"size": 5,
+                               "number_of_objects": 1,
+                               "horizon": 20},
+                "env_class": GridPickAndPlace,
                 "number_of_demonstrations": 1000,
                 "regenerate_demonstrations": False,
-                "demo_path": "/home/mark/tum/2022ss/thesis/master_thesis/demonstration/collection/ParameterizedReach_2Waypoint/1000_1658869650_9963062/demo.hdf5",
-                "expert_policy": ParameterizedReachDemonstrationPolicy(),
+                "demo_path": "/home/mark/tum/2022ss/thesis/master_thesis/demonstration/collection/GridPickAndPlace/1000_1661520571_830977/demo.hdf5",
+                "expert_policy": GridPickAndPlacePolicy(),
                 "model_kwargs": {"batch_size": 8192,
                                  "learning_rate": 1e-3,
                                  "lambda_bc": 1,
-                                 "policy_kwargs": {"net_arch": [64, 64]},
+                                 "policy_kwargs": {"net_arch": [20, 20]},
                                  "learning_starts": 5000,
-                                 "buffer_size": int(1e6),
-                                 "max_demo_ratio": 0.01,
-                                 "reach_zero": 5e5,
+                                 "buffer_size": int(1e5),
+                                 "max_demo_ratio": 0.1,
+                                 "reach_zero": 1e6,
                                  "n_sampled_goal": 0,
                                  "goal_selection_strategy": None,
                                  "tau": 0.005,
                                  }},
-               {"env_kwargs": {"number_of_waypoints": 2,
-                               "horizon": 200},
-                "env_class": ParameterizedReachEnv,
+               {"env_kwargs": {"size": 5,
+                               "number_of_objects": 1,
+                               "horizon": 20},
+                "env_class": GridPickAndPlace,
                 "number_of_demonstrations": 1000,
                 "regenerate_demonstrations": False,
-                "demo_path": "/home/mark/tum/2022ss/thesis/master_thesis/demonstration/collection/ParameterizedReach_2Waypoint/1000_1658869650_9963062/demo.hdf5",
-                "expert_policy": ParameterizedReachDemonstrationPolicy(),
+                "demo_path": "/home/mark/tum/2022ss/thesis/master_thesis/demonstration/collection/GridPickAndPlace/1000_1661520571_830977/demo.hdf5",
+                "expert_policy": GridPickAndPlacePolicy(),
                 "model_kwargs": {"batch_size": 8192,
                                  "learning_rate": 1e-3,
                                  "lambda_bc": 1,
-                                 "policy_kwargs": {"net_arch": [64, 64]},
+                                 "policy_kwargs": {"net_arch": [32, 32]},
                                  "learning_starts": 5000,
-                                 "buffer_size": int(1e6),
-                                 "max_demo_ratio": 0.025,
-                                 "reach_zero": 5e5,
+                                 "buffer_size": int(1e5),
+                                 "max_demo_ratio": 0.1,
+                                 "reach_zero": 1e6,
                                  "n_sampled_goal": 0,
                                  "goal_selection_strategy": None,
                                  "tau": 0.005,

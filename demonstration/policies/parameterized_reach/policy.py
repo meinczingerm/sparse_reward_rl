@@ -1,10 +1,7 @@
-from typing import List
-
 import numpy as np
-from robosuite import load_controller_config
 import robosuite.utils.transform_utils as T
 
-from env.parameterized_reach import ParameterizedReachEnv
+from env.robot_envs.parameterized_reach import ParameterizedReachEnv
 
 class ParameterizedReachDemonstrationPolicy:
     """

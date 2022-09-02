@@ -1,11 +1,9 @@
 from typing import List
 
 import numpy as np
-from robosuite import load_controller_config
 from robosuite.utils.transform_utils import quat2mat, get_orientation_error, mat2quat, euler2mat
 
-from env.cable_manipulation_base import CableManipulationBase
-from env.cable_insertion import CableInsertionEnv
+from env.robot_envs.cable_insertion import CableInsertionEnv
 
 
 class RobotTarget:

@@ -14,15 +14,10 @@ from glob import glob
 import h5py
 import numpy as np
 import robosuite as suite
-from robosuite import load_controller_config
-from robosuite.utils.camera_utils import DemoPlaybackCameraMover
-from robosuite.wrappers import DataCollectionWrapper, VisualizationWrapper
+from robosuite.wrappers import VisualizationWrapper
 
-from demonstration.inverse_kinematic_policy import IKDemonstrationPolicy
-from demonstration.observation_collection_wrapper import ObservationCollectionWrapper
-from demonstration.policy import DemonstrationPolicy
-from env.cable_manipulation_base import CableManipulationBase
-from env.cable_insertion import CableInsertionEnv
+from demonstration.observation_collection_wrapper import RobosuiteObservationCollectionWrapper, \
+    GridWorldDataCollectionWrapper
 from utils import get_project_root_path
 
 
@@ -39,7 +34,7 @@ def run_demonstration_episode(env, policy, render=True):
     policy.reset()
     if render:
         env.render()
-    random_action = np.random.uniform(low=env.action_spec[0], high=env.action_spec[1])
+    random_action = env.action_space.sample()
     observation, _, done, _ = env.step(random_action)
 
     # Loop until we get a reset from the input or the task completes
@@ -131,9 +126,14 @@ def gather_demonstrations_as_hdf5(directory, out_dir, env_info):
 
         # store model xml as an attribute
         xml_path = os.path.join(directory, ep_directory, "model.xml")
-        with open(xml_path, "r") as f:
-            xml_str = f.read()
-        ep_data_grp.attrs["model_file"] = xml_str
+        try:
+            with open(xml_path, "r") as f:
+                xml_str = f.read()
+            ep_data_grp.attrs["model_file"] = xml_str
+        except FileNotFoundError:
+            # This environment doesn't have a modelfile. Note: this is only an issue if the environment is based
+            # on robosuite.
+            pass
 
         # write datasets for states and actions
         ep_data_grp.create_dataset("states", data=np.array(states))
@@ -166,11 +166,16 @@ def collect_demonstrations(env, env_config: dict, demonstration_policy, episode_
     env_config = json.dumps(env_config)
 
     # Wrap this with visualization wrapper
-    env = VisualizationWrapper(env)
+    if hasattr(env, 'sim'):
+        env = VisualizationWrapper(env)
 
     # wrap the environment with data collection wrapper
     tmp_directory = "/tmp/{}".format(str(time.time()).replace(".", "_"))
-    env = ObservationCollectionWrapper(env, tmp_directory)
+    if hasattr(env, 'sim'):
+        env = VisualizationWrapper(env)
+        env = RobosuiteObservationCollectionWrapper(env, tmp_directory)
+    else:
+        env = GridWorldDataCollectionWrapper(env, tmp_directory)
 
     # make a new timestamped directory
     t1, t2 = str(time.time()).split(".")

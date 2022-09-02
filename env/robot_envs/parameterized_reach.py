@@ -1,7 +1,3 @@
-import itertools
-import os.path
-import warnings
-from abc import abstractmethod
 from collections import OrderedDict
 
 import numpy as np
@@ -10,17 +6,12 @@ from gym.vector.utils import spaces
 from mujoco_py import MjRenderContextOffscreen
 from robosuite import load_controller_config
 from robosuite.environments.manipulation.single_arm_env import SingleArmEnv
-from robosuite.environments.manipulation.two_arm_env import TwoArmEnv
-from robosuite.models.arenas import TableArena, EmptyArena
-from robosuite.models.objects import MujocoXMLObject, CapsuleObject, BallObject
+from robosuite.models.arenas import EmptyArena
+from robosuite.models.objects import CapsuleObject
 from robosuite.models.tasks import ManipulationTask
-from robosuite.renderers.mujoco.mujoco_py_renderer import MujocoPyRenderer
-from robosuite.utils.mjcf_utils import CustomMaterial
 from robosuite.utils.observables import Observable, sensor
-from robosuite.utils.placement_samplers import UniformRandomSampler
 
-from env.goal_handler import HinDRLGoalHandler
-from utils import get_project_root_path
+from env.robot_envs.goal_handler import HinDRLGoalHandler
 
 
 class ParameterizedReachEnv(SingleArmEnv):

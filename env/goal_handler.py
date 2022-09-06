@@ -26,7 +26,10 @@ class HinDRLGoalHandler:
 
         self.demonstrations = demonstrations
         self.goal_buffer = [demo[-1] for demo in demonstrations]
-        self.epsilon = self._calc_epsilon(demonstrations, m, k)
+        if m == 0:
+            self.epsilon = 0
+        else:
+            self.epsilon = self._calc_epsilon(demonstrations, m, k)
 
     @staticmethod
     def _calc_epsilon(demonstrations: List[np.array], m: int, k: int):
@@ -59,11 +62,13 @@ class HinDRLGoalHandler:
         :return:
         """
         # Sparse reward
-        distance = np.linalg.norm(achieved_goal - goal)
-        reward = (distance < self.epsilon).astype(float)
+        distance = np.linalg.norm(achieved_goal - goal, axis=1)
+        reward = (distance <= self.epsilon).astype(float)
         for info in infos:
             info['is_demonstration'] = False
         return reward
 
     def get_desired_goal(self):
+        if len(self.goal_buffer) == 1:
+            return self.goal_buffer[0]
         return self.goal_buffer[np.random.randint(0, len(self.goal_buffer)-1)]

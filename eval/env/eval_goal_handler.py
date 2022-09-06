@@ -29,13 +29,13 @@ def eval_goal_handler(goal_handler: HinDRLGoalHandler, samples_from_each_episode
 
     y_pred = []
     for pair in true_pairs:
-        y_pred.append(goal_handler.compute_reward(pair[0], pair[1], None))
+        y_pred.append(goal_handler.compute_reward(pair[0], pair[1], [{}]))
     y_pred_1 = np.array(y_pred)
     y_true_1 = np.ones_like(y_pred_1)
 
     y_pred = []
     for pair in false_pairs:
-        y_pred.append(goal_handler.compute_reward(pair[0], pair[1], None))
+        y_pred.append(goal_handler.compute_reward(pair[0], pair[1], [{}]))
     y_pred_2 = np.array(y_pred)
     y_true_2 = np.zeros_like(y_pred_2)
 
@@ -48,6 +48,6 @@ def eval_goal_handler(goal_handler: HinDRLGoalHandler, samples_from_each_episode
 
 
 if __name__ == '__main__':
-    goal_handler = HinDRLGoalHandler("/home/mark/tum/2022ss/thesis/master_thesis/demonstration/collection/ParameterizedReach_2Waypoint/1656412922_273637/demo.hdf5",
-                                     m=10, k=0)
-    eval_goal_handler(goal_handler)
+    goal_handler = HinDRLGoalHandler("/home/mark/tum/2022ss/thesis/master_thesis/demonstration/collection/GridPickAndPlace/10000_1662034052_3822935/demo.hdf5",
+                                     m=2, k=0)
+    eval_goal_handler(goal_handler, samples_from_each_episode=2)

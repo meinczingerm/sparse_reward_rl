@@ -97,7 +97,7 @@ class GridPickAndPlace(gym.Env):
         :return:
         """
         if self.goal_handler is not None:
-            self.goal_handler.compute_reward(achieved_goal, goal, _info)
+            return self.goal_handler.compute_reward(achieved_goal, goal, _info)
         else:
             raise NotImplementedError
 

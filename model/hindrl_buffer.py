@@ -1,3 +1,4 @@
+import warnings
 from collections import deque
 from typing import Optional, Union, NamedTuple, Dict, List, Any
 
@@ -101,6 +102,7 @@ class HinDRLReplayBuffer(HerReplayBuffer):
             episode_actions = self.demonstrations["actions"][episode_idx]
             episode_goals = self.demonstrations["desired_goals"][episode_idx]
             for timestep_idx in range(episode_observations.shape[0]):
+                warnings.warn("Check desired goal, whether correct.")
                 obs = {"observation": episode_observations[timestep_idx],
                        "achieved_goal": episode_observations[timestep_idx],
                        "desired_goal": episode_goals[timestep_idx]}

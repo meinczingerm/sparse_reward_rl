@@ -72,3 +72,23 @@ class HinDRLGoalHandler:
         if len(self.goal_buffer) == 1:
             return self.goal_buffer[0]
         return self.goal_buffer[np.random.randint(0, len(self.goal_buffer)-1)]
+
+
+class DefinedDistanceGoalHandler:
+    def __init__(self, epsilon):
+        self.epsilon = epsilon
+
+    def compute_reward(self, achieved_goal, goal, infos):
+        """
+        Goal conditioned reward calculation based on self.epsilon threshold
+        :param achieved_goal: batched achieved goal
+        :param goal: batched goal
+        :param info:
+        :return:
+        """
+        # Sparse reward
+        distance = np.linalg.norm(achieved_goal - goal, axis=1)
+        reward = (distance <= self.epsilon).astype(float)
+        for info in infos:
+            info['is_demonstration'] = False
+        return reward

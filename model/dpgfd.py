@@ -13,7 +13,7 @@ from stable_baselines3.common.utils import polyak_update
 
 from demonstration.policies.gridworld.grid_pick_and_place_policy import GridPickAndPlacePolicy
 from demonstration.policies.parameterized_reach.policy import ParameterizedReachDemonstrationPolicy
-from env.goal_handler import HinDRLGoalHandler
+from env.goal_handler import HinDRLGoalHandler, DefinedDistanceGoalHandler
 from env.grid_world_envs.pick_and_place import GridPickAndPlace
 from env.robot_envs.parameterized_reach import ParameterizedReachEnv
 from eval import EvalVideoCallback

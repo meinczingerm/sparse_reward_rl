@@ -14,7 +14,7 @@ from robosuite.models.objects import MujocoXMLObject
 from robosuite.models.tasks import ManipulationTask
 from robosuite.utils.observables import Observable, sensor
 
-from env.robot_envs.goal_handler import HinDRLGoalHandler
+from env.goal_handler import HinDRLGoalHandler
 from utils import get_project_root_path
 
 
@@ -304,10 +304,13 @@ class CableManipulationBase(TwoArmEnv):
         return reward
 
     def reset(self):
-        obs = super(CableManipulationBase, self).reset()
-        self.desired_goal = self.goal_handler.get_desired_goal()
-        assert self.desired_goal.shape == self.observation_space["desired_goal"].shape
+        if self.goal_handler is not None:
+            self.desired_goal = self.goal_handler.get_desired_goal()
+            assert self.desired_goal.shape == self.observation_space["desired_goal"].shape
+        else:
+            self.desired_goal = None
 
+        obs = super(CableManipulationBase, self).reset()
         return obs
 
     def _reset_internal(self):
@@ -366,7 +369,7 @@ class CableManipulationBase(TwoArmEnv):
 
         # initialize objects of interest
         self.cable_stand = MujocoXMLObject(os.path.join(get_project_root_path(),
-                                                         "env/assets/cable_stand/cable_stand_object.xml"),
+                                                         "env/robot_envs/assets/cable_stand/cable_stand_object.xml"),
                                            "cable_stand", joints=None)
 
         # task includes arena, robot, and objects of interest

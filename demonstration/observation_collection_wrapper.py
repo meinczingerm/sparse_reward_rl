@@ -1,5 +1,6 @@
 import os
 import time
+import warnings
 
 import numpy as np
 from robosuite.wrappers import DataCollectionWrapper
@@ -21,7 +22,7 @@ class RobosuiteObservationCollectionWrapper(DataCollectionWrapper):
                 - (bool) whether the current episode is completed or not
                 - (dict) misc information
         """
-        raise Warning("Check whether action and observation is not shifted from each other")
+        warnings.warn("Check whether action and observation is not shifted from each other")
         ret = super(DataCollectionWrapper, self).step(action)
         self.t += 1
 

@@ -18,13 +18,18 @@ class HinDRLGoalHandler:
         :param k: k parameter used for calculating the goal conditioned reward threshold epsilon
                     (more info appendix A.8, https://arxiv.org/pdf/2112.00597.pdf)
         """
+        self.epsilon_params = {"m": m, "k": k}
         demonstrations = []
         with h5py.File(demonstration_hdf5, "r") as f:
             for demo_id in f["data"].keys():
                 demonstrations.append(np.array(f["data"][demo_id]["observations"]))
 
+        self.demonstrations = demonstrations
         self.goal_buffer = [demo[-1] for demo in demonstrations]
-        self.epsilon = self._calc_epsilon(demonstrations, m, k)
+        if m == 0:
+            self.epsilon = 0
+        else:
+            self.epsilon = self._calc_epsilon(demonstrations, m, k)
 
     @staticmethod
     def _calc_epsilon(demonstrations: List[np.array], m: int, k: int):
@@ -57,11 +62,33 @@ class HinDRLGoalHandler:
         :return:
         """
         # Sparse reward
-        distance = np.linalg.norm(achieved_goal - goal)
-        reward = (distance < self.epsilon).astype(float)
+        distance = np.linalg.norm(achieved_goal - goal, axis=1)
+        reward = (distance <= self.epsilon).astype(float)
         for info in infos:
             info['is_demonstration'] = False
         return reward
 
     def get_desired_goal(self):
+        if len(self.goal_buffer) == 1:
+            return self.goal_buffer[0]
         return self.goal_buffer[np.random.randint(0, len(self.goal_buffer)-1)]
+
+
+class DefinedDistanceGoalHandler:
+    def __init__(self, epsilon):
+        self.epsilon = epsilon
+
+    def compute_reward(self, achieved_goal, goal, infos):
+        """
+        Goal conditioned reward calculation based on self.epsilon threshold
+        :param achieved_goal: batched achieved goal
+        :param goal: batched goal
+        :param info:
+        :return:
+        """
+        # Sparse reward
+        distance = np.linalg.norm(achieved_goal - goal, axis=1)
+        reward = (distance <= self.epsilon).astype(float)
+        for info in infos:
+            info['is_demonstration'] = False
+        return reward

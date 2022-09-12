@@ -11,7 +11,7 @@ from robosuite.models.objects import CapsuleObject
 from robosuite.models.tasks import ManipulationTask
 from robosuite.utils.observables import Observable, sensor
 
-from env.robot_envs.goal_handler import HinDRLGoalHandler
+from env.goal_handler import HinDRLGoalHandler
 
 
 class ParameterizedReachEnv(SingleArmEnv):

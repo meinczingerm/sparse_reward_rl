@@ -124,6 +124,14 @@ class GridPickAndPlace(gym.Env):
 
         return state
 
+    def _sample_from_free_space_for_object(self, object_id):
+        """
+        Depending on the object id, get random grid space. There is only difference between objects in child classes.
+        :param object_id: id of the object (int)
+        :return: random position (np.array)
+        """
+        return self._sample_from_free_space(self.available_grid_space)
+
     def _sample_from_free_space(self, sampling_space: gym.spaces.Box):
         blocked_space_keys = [key for key in self._state.keys() if "pos" in key]
         _used_positions = np.empty([0, 2])
@@ -165,7 +173,7 @@ class GridPickAndPlace(gym.Env):
 
                 else:
                     # Release object and teleport to new random free position
-                    new_place = self._sample_from_free_space(self.available_grid_space)
+                    new_place = self._sample_from_free_space_for_object(object_id=released_obj)
                     self._state[f"object_{released_obj}_pos"] = new_place
 
         if grab == 1:

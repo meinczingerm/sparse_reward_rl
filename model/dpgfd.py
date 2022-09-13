@@ -17,7 +17,7 @@ from env.goal_handler import HinDRLGoalHandler, DefinedDistanceGoalHandler
 from env.grid_world_envs.pick_and_place import GridPickAndPlace
 from env.robot_envs.parameterized_reach import ParameterizedReachEnv
 from eval import EvalVideoCallback
-from model.hindrl_buffer import HinDRLReplayBuffer
+from model.hindrl_buffer import HinDRLReplayBuffer, HinDRLSamplingStrategy
 from train import _collect_demonstration
 from utils import create_log_dir, save_dict
 
@@ -40,8 +40,8 @@ class DPGfD(TQC):
             del model_kwargs["max_demo_ratio"]
             self.reach_zero = model_kwargs["reach_zero"]
             del model_kwargs["reach_zero"]
-            goal_selection_strategy = model_kwargs["goal_selection_strategy"]
-            del model_kwargs["goal_selection_strategy"]
+            hindrl_sampling_strategy = model_kwargs["hindrl_sampling_strategy"]
+            del model_kwargs["hindrl_sampling_strategy"]
             n_sampled_goal = model_kwargs["n_sampled_goal"]
             del model_kwargs["n_sampled_goal"]
             model_id = model_kwargs.get("model_id", -1)
@@ -52,7 +52,7 @@ class DPGfD(TQC):
             self.replay_buffer = HinDRLReplayBuffer(demonstration_hdf5, env, n_sampled_goal=n_sampled_goal,
                                                     max_episode_length=env.envs[0].horizon, device="cuda",
                                                     buffer_size=int(buffer_size),
-                                                    goal_selection_strategy=goal_selection_strategy)
+                                                    hindrl_sampling_strategy=hindrl_sampling_strategy)
         print(f"Model initialized {model_id}")
 
 
@@ -276,25 +276,26 @@ if __name__ == '__main__':
     #            ]
 
 
-    configs = [{"env_kwargs": {"size": 10,
+    configs = [               {"env_kwargs": {"size": 10,
                                "number_of_objects": 2,
-                               "horizon": 100},
+                               "horizon": 100,
+                               "goal_handler": DefinedDistanceGoalHandler(epsilon=0)},
                 "env_class": GridPickAndPlace,
                 "number_of_demonstrations": 30,
                 "regenerate_demonstrations": True,
                 "demo_path": None,
                 "expert_policy": GridPickAndPlacePolicy(),
-                "model_kwargs": {"model_id": 0,
+                "model_kwargs": {"model_id": 1,
                                  "batch_size": 8192,
                                  "learning_rate": 1e-3,
                                  "lambda_bc": 1,
                                  "policy_kwargs": {"net_arch": [32, 32]},
                                  "learning_starts": 5000,
                                  "buffer_size": int(5e5),
-                                 "max_demo_ratio": 0.5,
+                                 "max_demo_ratio": 0.3,
                                  "reach_zero": 1e6,
-                                 "n_sampled_goal": 0,
-                                 "goal_selection_strategy": None,
+                                 "n_sampled_goal": 2,
+                                 "hindrl_sampling_strategy": HinDRLSamplingStrategy.JointUnion,
                                  "tau": 0.005,
                                  }},
                {"env_kwargs": {"size": 10,
@@ -313,10 +314,10 @@ if __name__ == '__main__':
                                  "policy_kwargs": {"net_arch": [32, 32]},
                                  "learning_starts": 5000,
                                  "buffer_size": int(5e5),
-                                 "max_demo_ratio": 0.3,
+                                 "max_demo_ratio": 0.0,
                                  "reach_zero": 1e6,
                                  "n_sampled_goal": 2,
-                                 "goal_selection_strategy": "future",
+                                 "hindrl_sampling_strategy": HinDRLSamplingStrategy.JointUnion,
                                  "tau": 0.005,
                                  }},
                # {"env_kwargs": {"size": 10,

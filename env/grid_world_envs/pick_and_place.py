@@ -88,6 +88,9 @@ class GridPickAndPlace(gym.Env):
             self.window = pygame.display.set_mode((self.window_size, self.window_size))
             self.clock = pygame.time.Clock()
 
+    def add_goal_handler(self, goal_handler):
+        self.goal_handler = goal_handler
+
     def compute_reward(self, achieved_goal, goal, _info):
         """
         Calculates the reward given the achieved_goal and goal. It is used by HER for relabeling.
@@ -145,11 +148,12 @@ class GridPickAndPlace(gym.Env):
     def _sample_from_not_used_position(sampling_space: gym.spaces.Box, _used_positions):
         while True:
             sample = sampling_space.sample()
-            if np.equal(_used_positions, sample).any():
+            sample = np.expand_dims(sample, 0)
+            if np.equal(_used_positions, sample).all(axis=1).any():
                 continue
             else:
                 _used_positions = np.vstack((_used_positions, sample))
-                return sample, _used_positions
+                return sample[0], _used_positions
 
     def step(self, action):
         done = 0

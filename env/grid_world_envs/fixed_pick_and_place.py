@@ -17,11 +17,14 @@ class FixedGridPickAndPlace(GridPickAndPlace):
     """This env is a slight modification of the GridPickAndPlace environment. In this case the positions of the
     objects and the agent and goal positions are fixed with to places with small variance. This reduces the actually
     necessary state space, and thus making the demonstrations more informative about the task."""
-    def __init__(self, random_box_size, number_of_objects=2, render_mode: Optional[str] = None, size: int = 10,
+    name = "FixedGridPickAndPlace"
+
+    def __init__(self, random_box_size: int, number_of_objects=2, render_mode: Optional[str] = None, size: int = 10,
                  horizon=100, goal_handler: HinDRLGoalHandler = None):
         if number_of_objects != 2:
             raise NotImplementedError
 
+        self.random_box_size = random_box_size
         self.starting_box = {
             "agent_pos": self._get_box_starting_from_corner(np.array([0, 0]), random_box_size),
             "goal_pos": self._get_box_starting_from_corner(np.array([0, size - random_box_size]),
@@ -57,8 +60,12 @@ class FixedGridPickAndPlace(GridPickAndPlace):
                    dtype=int)
 
     def _sample_from_free_space_for_object(self, object_id):
-        used_position = self._state["agent_pos"]
-        used_position = used_position.reshape([1, 2])
+        if self.random_box_size == 1:
+            # in case of box_size 1 it can happen that the only available space is blocked by the agent
+            used_position = np.empty([0, 2])
+        else:
+            used_position = self._state["agent_pos"]
+            used_position = used_position.reshape([1, 2])
         pos_sample, _ = self._sample_from_not_used_position(self.starting_box[f"object_{object_id}_pos"], used_position)
         return pos_sample
 

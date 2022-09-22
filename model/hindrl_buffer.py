@@ -285,6 +285,7 @@ class HinDRLReplayBuffer(HerReplayBuffer):
                 transitions["info"][her_indices, 0],
             )
 
+
         # concatenate observation with (desired) goal
         observations = self._normalize_obs(transitions, maybe_vec_env)
 
@@ -315,7 +316,7 @@ class HinDRLReplayBuffer(HerReplayBuffer):
                 is_demo=self.to_torch(is_demo))
 
             demo_samples = self._sample_transitions_from_demonstrations(batch_size_from_demo, maybe_vec_env)
-            return self._merge_samples([rollout_samples, demo_samples])
+            return self._merge_samples([rollout_samples, demo_samples]), her_indices
         else:
             raise NotImplementedError
 

@@ -1,5 +1,6 @@
 import warnings
 from collections import deque
+from enum import Enum
 from typing import Optional, Union, NamedTuple, Dict, List, Any
 
 import h5py
@@ -14,6 +15,11 @@ from stable_baselines3.common.utils import polyak_update
 from stable_baselines3.common.vec_env import VecNormalize
 from stable_baselines3.her import GoalSelectionStrategy
 
+class HinDRLSamplingStrategy(Enum):
+    RolloutConditioned = 0
+    TaskConditioned = 1
+    JointUnion = 2
+    JointIntersection = 3
 
 class DemoDictReplayBufferSamples(NamedTuple):
     observations: TensorDict
@@ -25,10 +31,10 @@ class DemoDictReplayBufferSamples(NamedTuple):
 
 
 class HinDRLReplayBuffer(HerReplayBuffer):
-    def __init__(self, demonstration_hdf5, env, goal_selection_strategy="uniform_demonstration", demo_to_rollout_ratio=0.025,
+    def __init__(self, demonstration_hdf5, env, hindrl_sampling_strategy: HinDRLSamplingStrategy,
+                 demo_to_rollout_ratio=0.025,
                  buffer_size=int(1e5), **kwargs):
         self.demonstration_hdf5 = demonstration_hdf5
-        self.goal_selection_strategy = goal_selection_strategy
 
         self.demonstrations = {"actions": [],
                                "observations": [],
@@ -58,7 +64,20 @@ class HinDRLReplayBuffer(HerReplayBuffer):
         self.number_of_demonstrations = len(self.demonstrations["actions"])
         self.demo_episode_lengths = np.vstack(self.demo_episode_lengths)
 
-        super().__init__(env, buffer_size, **kwargs)
+        her_sampling_method = {
+            HinDRLSamplingStrategy.RolloutConditioned: GoalSelectionStrategy.FUTURE,
+            HinDRLSamplingStrategy.JointUnion: GoalSelectionStrategy.FUTURE,
+            # HER sampling is not used, doesn't matter
+            HinDRLSamplingStrategy.TaskConditioned: GoalSelectionStrategy.FUTURE,
+            HinDRLSamplingStrategy.JointIntersection: GoalSelectionStrategy.FUTURE
+        }
+        self.hindrl_sampling_strategy = hindrl_sampling_strategy
+        if self.hindrl_sampling_strategy == HinDRLSamplingStrategy.JointUnion:
+            self.union_sampling_ratio = 0.5
+
+
+        super().__init__(env, buffer_size, goal_selection_strategy=her_sampling_method[self.hindrl_sampling_strategy],
+                         **kwargs)
 
         self._demo_buffer = {
             key: np.zeros((self.number_of_demonstrations, self.max_episode_length, *buffer_item.shape[2:]), dtype=np.float32)
@@ -70,10 +89,30 @@ class HinDRLReplayBuffer(HerReplayBuffer):
 
     def sample_goals(self, episode_indices: np.ndarray, her_indices: np.ndarray, transitions_indices: np.ndarray,
     ) -> np.ndarray:
-        if self.goal_selection_strategy == "uniform_demonstration":
-            return self._sample_uniform_demonstration_goals(num_of_goals=her_indices.shape[0])
-        else:
+        if self.hindrl_sampling_strategy == HinDRLSamplingStrategy.RolloutConditioned:
+            # use standard HER relabeling
             return super().sample_goals(episode_indices, her_indices, transitions_indices)
+        else:
+            if self.hindrl_sampling_strategy == HinDRLSamplingStrategy.TaskConditioned:
+                return self._sample_uniform_demonstration_goals(num_of_goals=her_indices.shape[0])
+            elif self.hindrl_sampling_strategy == HinDRLSamplingStrategy.JointUnion:
+                return self._sample_union_of_her_and_demo_goals(episode_indices, her_indices, transitions_indices)
+            else:
+                raise NotImplementedError
+
+    def _sample_union_of_her_and_demo_goals(self, episode_indices: np.ndarray, her_indices: np.ndarray,
+                                           transitions_indices: np.ndarray) -> np.ndarray:
+        num_of_rollout_samples = int(her_indices.shape[0] * self.union_sampling_ratio)
+        num_of_demo_samples = her_indices.shape[0] - num_of_rollout_samples
+
+        rollout_goals = super().sample_goals(episode_indices[:num_of_rollout_samples],
+                                             her_indices[:num_of_rollout_samples],
+                                             transitions_indices[:num_of_rollout_samples])
+
+        demo_goals = self._sample_uniform_demonstration_goals(num_of_demo_samples)
+
+        goals = np.concatenate((rollout_goals, demo_goals))
+        return goals
 
     def _sample_uniform_demonstration_goals(self, num_of_goals: int):
         """
@@ -246,6 +285,7 @@ class HinDRLReplayBuffer(HerReplayBuffer):
                 transitions["info"][her_indices, 0],
             )
 
+
         # concatenate observation with (desired) goal
         observations = self._normalize_obs(transitions, maybe_vec_env)
 
@@ -276,7 +316,7 @@ class HinDRLReplayBuffer(HerReplayBuffer):
                 is_demo=self.to_torch(is_demo))
 
             demo_samples = self._sample_transitions_from_demonstrations(batch_size_from_demo, maybe_vec_env)
-            return self._merge_samples([rollout_samples, demo_samples])
+            return self._merge_samples([rollout_samples, demo_samples]), her_indices
         else:
             raise NotImplementedError
 

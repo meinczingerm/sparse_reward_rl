@@ -88,6 +88,9 @@ class GridPickAndPlace(gym.Env):
             self.window = pygame.display.set_mode((self.window_size, self.window_size))
             self.clock = pygame.time.Clock()
 
+    def add_goal_handler(self, goal_handler):
+        self.goal_handler = goal_handler
+
     def compute_reward(self, achieved_goal, goal, _info):
         """
         Calculates the reward given the achieved_goal and goal. It is used by HER for relabeling.
@@ -124,6 +127,14 @@ class GridPickAndPlace(gym.Env):
 
         return state
 
+    def _sample_from_free_space_for_object(self, object_id):
+        """
+        Depending on the object id, get random grid space. There is only difference between objects in child classes.
+        :param object_id: id of the object (int)
+        :return: random position (np.array)
+        """
+        return self._sample_from_free_space(self.available_grid_space)
+
     def _sample_from_free_space(self, sampling_space: gym.spaces.Box):
         blocked_space_keys = [key for key in self._state.keys() if "pos" in key]
         _used_positions = np.empty([0, 2])
@@ -137,11 +148,12 @@ class GridPickAndPlace(gym.Env):
     def _sample_from_not_used_position(sampling_space: gym.spaces.Box, _used_positions):
         while True:
             sample = sampling_space.sample()
-            if np.equal(_used_positions, sample).any():
+            sample = np.expand_dims(sample, 0)
+            if np.equal(_used_positions, sample).all(axis=1).any():
                 continue
             else:
                 _used_positions = np.vstack((_used_positions, sample))
-                return sample, _used_positions
+                return sample[0], _used_positions
 
     def step(self, action):
         done = 0
@@ -165,7 +177,7 @@ class GridPickAndPlace(gym.Env):
 
                 else:
                     # Release object and teleport to new random free position
-                    new_place = self._sample_from_free_space(self.available_grid_space)
+                    new_place = self._sample_from_free_space_for_object(object_id=released_obj)
                     self._state[f"object_{released_obj}_pos"] = new_place
 
         if grab == 1:

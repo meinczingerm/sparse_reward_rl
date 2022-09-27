@@ -46,12 +46,12 @@ class HinDRLGoalHandler:
         for episode in demonstrations:
             rolling_window_left = episode[m:]
             rolling_window_right = episode[:-m]
-            distance = np.linalg.norm(rolling_window_left - rolling_window_right, axis=1)
+            distance = np.abs(rolling_window_left - rolling_window_right)
             distances.append(distance)
-        distances = np.hstack(distances)
+        distances = np.vstack(distances)
 
-        mean_distance = np.mean(distances)
-        std_distance = np.std(distances)
+        mean_distance = np.mean(distances, axis=0)
+        std_distance = np.std(distances, axis=0)
         epsilon = mean_distance + k * std_distance
         return epsilon
 
@@ -64,8 +64,9 @@ class HinDRLGoalHandler:
         :return:
         """
         # Sparse reward
-        distance = np.linalg.norm(achieved_goal - goal, axis=1)
-        reward = (distance <= self.epsilon).astype(float)
+        distance = np.abs(achieved_goal - goal)
+        reward = np.all(distance < self.epsilon, axis=1).astype(float)
+
         for info in infos:
             info['is_demonstration'] = False
         return reward

@@ -47,6 +47,7 @@ def save_frames_as_gif(frames, path='./', filename='gym_animation.gif'):
 
     anim = animation.FuncAnimation(plt.gcf(), animate, frames=len(frames), interval=50)
     anim.save(os.path.join(path, filename), writer='imagemagick', fps=60)
+    plt.close()
 
 
 def get_project_root_path():

@@ -248,6 +248,14 @@ class CableManipulationBase(TwoArmEnv):
         self.metadata = None
         self.spec = None
 
+    def add_goal_handler(self, goal_handler):
+        """
+        Goal handler has to be added after init in some cases.
+        :param goal_handler: goal handler instance
+        :return: None
+        """
+        self.goal_handler = goal_handler
+
     def compute_reward(self, achieved_goal, goal, info):
         """
         Calculates the reward given the achieved_goal and goal. It is used by HER for relabeling.
@@ -257,7 +265,7 @@ class CableManipulationBase(TwoArmEnv):
         :return:
         """
         if self.goal_handler is not None:
-            self.goal_handler.compute_reward(achieved_goal, goal, info)
+            return self.goal_handler.compute_reward(achieved_goal, goal, info)
         else:
             raise NotImplementedError
 
@@ -267,6 +275,16 @@ class CableManipulationBase(TwoArmEnv):
         Returns observation space as spaces dict usually with keys=["observation", "achieved_goal", "desired_goal"]
         :return: observation space for the env defined as spaces.Dict({"key": spaces.box})
         """
+        raise NotImplementedError
+
+    @abstractmethod
+    def _get_custom_obs(self):
+        """
+        Returns the "observation" part of observation. ("achieved_goal" and "desired_goal" is calculated by
+        get_engineered_encoding)
+        :return: encoding (flattened np.array)
+        """
+
         raise NotImplementedError
 
     @abstractmethod
@@ -432,6 +450,11 @@ class CableManipulationBase(TwoArmEnv):
             return np.array(self.sim.data.site_xpos[father_tip_id])
 
         @sensor(modality=modality)
+        def custom_obs(obs_cache):
+            encoding = self._get_custom_obs()
+            return encoding
+
+        @sensor(modality=modality)
         def engineered_encoding(obs_cache):
             encoding = self._get_engineered_encoding()
             return encoding
@@ -442,7 +465,7 @@ class CableManipulationBase(TwoArmEnv):
 
         if self.use_engineered_observation_encoding:
             sensors = [mother_grip_pos, mother_grip_mat, mother_tip_pos, father_grip_pos, father_grip_mat,
-                       father_tip_pos, engineered_encoding, engineered_encoding]
+                       father_tip_pos, custom_obs, engineered_encoding]
             names = [f"mother_grip_pos", "mother_grip_mat", "mother_tip_pos", "father_grip_pos", "father_grip_mat",
                      "father_tip_pos", "observation", "achieved_goal"]
         else:

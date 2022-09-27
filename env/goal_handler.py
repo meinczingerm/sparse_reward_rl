@@ -19,17 +19,19 @@ class HinDRLGoalHandler:
                     (more info appendix A.8, https://arxiv.org/pdf/2112.00597.pdf)
         """
         self.epsilon_params = {"m": m, "k": k}
-        demonstrations = []
+        achieved_goal = []
         with h5py.File(demonstration_hdf5, "r") as f:
             for demo_id in f["data"].keys():
-                demonstrations.append(np.array(f["data"][demo_id]["observations"]))
+                if "desired_goal" in f["data"][demo_id]:
+                    raise NotImplementedError
+                else:
+                    achieved_goal.append(np.array(f["data"][demo_id]["achieved_goal"]))
 
-        self.demonstrations = demonstrations
-        self.goal_buffer = [demo[-1] for demo in demonstrations]
+        self.goal_buffer = [demo[-1] for demo in achieved_goal]
         if m == 0:
             self.epsilon = 0
         else:
-            self.epsilon = self._calc_epsilon(demonstrations, m, k)
+            self.epsilon = self._calc_epsilon(achieved_goal, m, k)
 
     @staticmethod
     def _calc_epsilon(demonstrations: List[np.array], m: int, k: int):

@@ -10,37 +10,56 @@ class BringNearEnv(CableManipulationBase):
     name = "BringNear"
 
     def _get_observation_space(self):
-        custom_obs_low_limits = np.array([-2, -2, -2, -1, -1, -1, -1, -2, -2, -2, -1, -1, -1, -1])
-        custom_obs_high_limits = np.array([2, 2, 2, 1, 1, 1, 1, 2, 2, 2, 1, 1, 1, 1])
-        goal_low_limits = np.array([-2, -2, -2, -2, -2, -2, -2, -2, -2, 0, 0])
-        goal_high_limits = np.array([2, 2, 2, 2, 2, 2, 2, 2, 2, 1, 1])
+        obs_low_limits = np.array([-2, -2, -2, -1, -1, -1, -1, -1, -1, -2, -2, -2, -1, -1, -1, -1, -1, -1, -2, -2, -2,
+                                   -2, -2, -2, -2, -2, -2, 0, 0])
+        obs_high_limits = np.array([2, 2, 2, 1, 1, 1, 1, 1, 1, 2, 2, 2, 1, 1, 1, 1, 1, 1, 2, 2, 2, 2, 2, 2, 2, 2, 2, 1,
+                                    1])
         observation_space = spaces.Dict(
             dict(observation=spaces.Box(
-                    custom_obs_low_limits, custom_obs_high_limits, shape=(14,), dtype="float32"
+                    obs_low_limits, obs_high_limits, shape=(29,), dtype="float32"
                 ),
                 desired_goal=spaces.Box(
-                    goal_low_limits, goal_high_limits, shape=(11,), dtype="float32"
+                    obs_low_limits, obs_high_limits, shape=(29,), dtype="float32"
                 ),
                 achieved_goal=spaces.Box(
-                    goal_low_limits, goal_high_limits, shape=(11,), dtype="float32"
+                    obs_low_limits, obs_high_limits, shape=(29,), dtype="float32"
                 )
             )
         )
         return observation_space
 
-    def _get_custom_obs(self):
+    def get_custom_obs(self):
+        return self.get_engineered_encoding()
+
+    def _get_pose(self):
         # xmat could be reached directly, but there was an error, which is already fixed, but nut in new robosuite yet:
         # https://github.com/ARISE-Initiative/robosuite/pull/326/commits/9ce616023a3d53ccf3ecb98615158b478e4db823
         # this should be changed later, since the eef quat is "not consistent" see "def _eef1_xmat(self):" description
         robot0_gripper_pos = self._eef0_xpos
-        robot0_gripper_quat = mat2quat(np.array(self.sim.data.site_xmat[self.robots[0].eef_site_id]).reshape(3, 3))
+        robot0_gripper_mat = np.array(self.sim.data.site_xmat[self.robots[0].eef_site_id]).reshape(3, 3)
+        robot0_gripper_ori = self._mat_to_ori_representation(robot0_gripper_mat)
         robot1_gripper_pos = self._eef1_xpos
-        robot1_gripper_quat = mat2quat(np.array(self.sim.data.site_xmat[self.robots[1].eef_site_id]).reshape(3, 3))
+        robot1_gripper_mat = np.array(self.sim.data.site_xmat[self.robots[1].eef_site_id]).reshape(3, 3)
+        robot1_gripper_ori = self._mat_to_ori_representation(robot1_gripper_mat)
 
-        obs = np.hstack([robot0_gripper_pos, robot0_gripper_quat, robot1_gripper_pos, robot1_gripper_quat])
+        obs = np.hstack([robot0_gripper_pos, robot0_gripper_ori, robot1_gripper_pos, robot1_gripper_ori])
         return obs
 
-    def _get_engineered_encoding(self):
+    def _mat_to_ori_representation(self, mat):
+        """
+        Returns the non-periodic representation of a rotation matrix, by stacking a rotation of the vector ([1, 0, 0])
+        and ([0, 1, 0]). This way the euclidean distance will be always small for small differences, and the problem of
+        periodicity can be avoided.
+        :param quat: quaternion
+        :return: non-periodic ori representation np.array(dim=[1, 6])
+        """
+        x_vector = np.array([[1, 0, 0]])
+        y_vector = np.array([[0, 1, 0]])
+
+        return np.hstack([(x_vector @ mat).squeeze(), (y_vector @ mat).squeeze()])
+
+
+    def _get_custom_encoding(self):
         # Important data
         robot0_gripper_pos = self._eef0_xpos
         robot1_gripper_pos = self._eef1_xpos
@@ -64,6 +83,10 @@ class BringNearEnv(CableManipulationBase):
 
         encoding = np.hstack([distance_to_mother_grip, distance_to_father_grip, distance_between_cable_tips,
                               grasp_mother, grasp_father])
+        return encoding
+
+    def get_engineered_encoding(self):
+        encoding = np.hstack([self._get_pose(), self._get_custom_encoding()])
         return encoding
 
     def _check_success(self):

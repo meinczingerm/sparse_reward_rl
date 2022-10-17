@@ -289,7 +289,7 @@ class CableManipulationBase(TwoArmEnv):
         raise NotImplementedError
 
     @abstractmethod
-    def _get_custom_obs(self):
+    def get_custom_obs(self):
         """
         Returns the "observation" part of observation. ("achieved_goal" and "desired_goal" is calculated by
         get_engineered_encoding)
@@ -299,7 +299,7 @@ class CableManipulationBase(TwoArmEnv):
         raise NotImplementedError
 
     @abstractmethod
-    def _get_engineered_encoding(self):
+    def get_engineered_encoding(self):
         """
         Calculates the heuristically engineered encoding of states.
         :return: encoding (flattened np.array)
@@ -462,12 +462,12 @@ class CableManipulationBase(TwoArmEnv):
 
         @sensor(modality=modality)
         def custom_obs(obs_cache):
-            encoding = self._get_custom_obs()
+            encoding = self.get_custom_obs()
             return encoding
 
         @sensor(modality=modality)
         def engineered_encoding(obs_cache):
-            encoding = self._get_engineered_encoding()
+            encoding = self.get_engineered_encoding()
             return encoding
 
         @sensor(modality=modality)

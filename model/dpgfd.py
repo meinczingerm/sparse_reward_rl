@@ -72,13 +72,13 @@ class DPGfD(TQC):
         actor_losses, critic_losses, bc_losses, scaled_bc_losses, non_zero_bc_losses, num_from_demonstration =\
             [], [], [], [], [], []
 
-        avg_her_rewards = []
+        sum_her_rewards = []
         for gradient_step in range(gradient_steps):
             # Sample replay buffer
             replay_data, her_indices = self.replay_buffer.sample(batch_size, env=self._vec_normalize_env)
 
             # logging her rewards
-            avg_her_rewards.append(replay_data.rewards[her_indices, 0].mean().item())
+            sum_her_rewards.append(replay_data.rewards[her_indices, 0].sum().item())
 
             # We need to sample because `log_std` may have changed between two gradient steps
             if self.use_sde:
@@ -171,7 +171,7 @@ class DPGfD(TQC):
         self.logger.record("train/scaled_bc_loss", np.mean(scaled_bc_losses))
         self.logger.record("train/scaling_factor", scaling)
         self.logger.record("train/non_zero_reward_sample", replay_data.rewards.sum().item())
-        self.logger.record("train/her_rewards_mean", np.mean(avg_her_rewards))
+        self.logger.record("train/her_rewards_sum", np.mean(sum_her_rewards))
         if len(ent_coef_losses) > 0:
             self.logger.record("train/ent_coef_loss", np.mean(ent_coef_losses))
 

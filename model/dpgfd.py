@@ -189,6 +189,8 @@ def train(_config):
     else:
         demo_path = _config["demo_path"]
 
+    eval_env_config = _config['env_kwargs']
+
     if "goal_handler" in _config.keys():
         if _config["goal_handler"] is not None:
             if "demonstration_hdf5" in _config["goal_handler_kwargs"] and\
@@ -196,14 +198,13 @@ def train(_config):
                 _config["goal_handler_kwargs"]["demonstration_hdf5"] = demo_path
             goal_handler = _config["goal_handler"](**_config["goal_handler_kwargs"])
             env.envs[0].add_goal_handler(goal_handler)
+            eval_env_config["goal_handler"] = goal_handler
 
     log_dir = create_log_dir(env.envs[0].name)
     _config['model_kwargs']['tensorboard_log'] = log_dir
     save_dict(_config, os.path.join(log_dir, 'config.json'))
 
     model = DPGfD(demo_path, env, _config["model_kwargs"])
-
-    eval_env_config = _config['env_kwargs']
 
     if not isinstance(env.envs[0].env, GridPickAndPlace):
         eval_env_config['has_renderer'] = False

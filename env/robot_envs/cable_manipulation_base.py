@@ -256,6 +256,17 @@ class CableManipulationBase(TwoArmEnv):
         """
         self.goal_handler = goal_handler
 
+        @sensor(modality=f"objective")
+        def get_desired_goal(obs_cache):
+            return self.desired_goal
+
+        desired_goal_observable = Observable(
+                name="desired_goal",
+                sensor=get_desired_goal,
+                sampling_rate=self.control_freq,
+            )
+        self.add_observable(desired_goal_observable)
+
     def compute_reward(self, achieved_goal, goal, info):
         """
         Calculates the reward given the achieved_goal and goal. It is used by HER for relabeling.

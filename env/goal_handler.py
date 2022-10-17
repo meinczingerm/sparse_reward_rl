@@ -1,14 +1,21 @@
+import warnings
+from enum import Enum
 from typing import List
 
 import h5py
 import numpy as np
 
 
+class GoalSelectionMethod(Enum):
+    Final = 0  # for choosing the last state as a goal
+    Percentage = 1  # for choosing the state at given percentage of the rollout as a goal
+
+
 class HinDRLGoalHandler:
     """ The HinDRL method described in https://arxiv.org/pdf/2112.00597.pdf uses environments with specific
     way for calculating the goal conditioned reward. This class is responsible for implementing this functionality
     by leveraging the use of a demonstration."""
-    def __init__(self, demonstration_hdf5, m, k):
+    def __init__(self, demonstration_hdf5, m, k, goal_selection=GoalSelectionMethod.Final):
         """
         Init.
         :param env_to_wrap: environment to wrap with HinDRL functionality
@@ -20,13 +27,17 @@ class HinDRLGoalHandler:
         """
         self.epsilon_params = {"m": m, "k": k}
         achieved_goal = []
+        desired_goal = []
         with h5py.File(demonstration_hdf5, "r") as f:
             for demo_id in f["data"].keys():
                 if "desired_goal" in f["data"][demo_id]:
-                    raise NotImplementedError
-                else:
-                    achieved_goal.append(np.array(f["data"][demo_id]["achieved_goal"]))
+                    desired_goal.append(np.array(f["data"][demo_id]["desired_goal"]))
+                    warnings.warn("?there is a desired goal, need to be checked?")
+                achieved_goal.append(np.array(f["data"][demo_id]["achieved_goal"]))
 
+        self.achieved_goals = achieved_goal
+        self.goal_selection = goal_selection
+        self.percentage_for_rollout_goal = -1
         self.goal_buffer = [demo[-1] for demo in achieved_goal]
         if m == 0:
             self.epsilon = 0
@@ -72,9 +83,19 @@ class HinDRLGoalHandler:
         return reward
 
     def get_desired_goal(self):
-        if len(self.goal_buffer) == 1:
-            return self.goal_buffer[0]
-        return self.goal_buffer[np.random.randint(0, len(self.goal_buffer)-1)]
+        if self.goal_selection == GoalSelectionMethod.Final:
+            if len(self.goal_buffer) == 1:
+                return self.goal_buffer[0]
+            goal = self.goal_buffer[np.random.randint(0, len(self.goal_buffer)-1)]
+        elif self.goal_selection == GoalSelectionMethod.Percentage:
+            assert self.percentage_for_rollout_goal != -1
+            rollout = self.achieved_goals[np.random.randint(0, len(self.goal_buffer))]
+
+            # -1 for avoiding over indexing, with percentage 1
+            goal = rollout[int(len(rollout) * self.percentage_for_rollout_goal)-1]
+        else:
+            raise NotImplementedError
+        return goal
 
 
 class DefinedDistanceGoalHandler:

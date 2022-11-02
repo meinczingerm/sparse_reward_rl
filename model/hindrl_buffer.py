@@ -33,7 +33,7 @@ class DemoDictReplayBufferSamples(NamedTuple):
 class HinDRLReplayBuffer(HerReplayBuffer):
     def __init__(self, demonstration_hdf5, env, hindrl_sampling_strategy: HinDRLSamplingStrategy,
                  demo_to_rollout_ratio=0.025,
-                 buffer_size=int(1e5), **kwargs):
+                 buffer_size=int(1e5), union_sampling_ratio=0.5, **kwargs):
         self.demonstration_hdf5 = demonstration_hdf5
 
         self.demonstrations = {"actions": [],
@@ -76,7 +76,7 @@ class HinDRLReplayBuffer(HerReplayBuffer):
         }
         self.hindrl_sampling_strategy = hindrl_sampling_strategy
         if self.hindrl_sampling_strategy == HinDRLSamplingStrategy.JointUnion:
-            self.union_sampling_ratio = 0.5
+            self.union_sampling_ratio = union_sampling_ratio
 
 
         super().__init__(env, buffer_size, goal_selection_strategy=her_sampling_method[self.hindrl_sampling_strategy],

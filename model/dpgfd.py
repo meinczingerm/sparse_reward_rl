@@ -50,12 +50,18 @@ class DPGfD(TQC):
             model_id = model_kwargs.get("model_id", -1)
             if "model_id" in model_kwargs.keys():
                 del model_kwargs["model_id"]
+            if "union_sampling_ratio" in model_kwargs.keys():
+                union_sampling_ratio = model_kwargs["union_sampling_ratio"]
+                del model_kwargs["union_sampling_ratio"]
+            else:
+                union_sampling_ratio = None
 
             super(DPGfD, self).__init__(policy, env, **model_kwargs, device=device)
             self.replay_buffer = HinDRLReplayBuffer(demonstration_hdf5, env, n_sampled_goal=n_sampled_goal,
                                                     max_episode_length=env.envs[0].horizon, device="cuda",
                                                     buffer_size=int(buffer_size),
-                                                    hindrl_sampling_strategy=hindrl_sampling_strategy)
+                                                    hindrl_sampling_strategy=hindrl_sampling_strategy,
+                                                    union_sampling_ratio=union_sampling_ratio)
         print(f"Model initialized {model_id}")
 
 

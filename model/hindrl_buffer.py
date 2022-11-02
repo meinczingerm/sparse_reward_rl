@@ -33,11 +33,12 @@ class DemoDictReplayBufferSamples(NamedTuple):
 class HinDRLReplayBuffer(HerReplayBuffer):
     def __init__(self, demonstration_hdf5, env, hindrl_sampling_strategy: HinDRLSamplingStrategy,
                  demo_to_rollout_ratio=0.025,
-                 buffer_size=int(1e5), **kwargs):
+                 buffer_size=int(1e5), union_sampling_ratio=0.5, **kwargs):
         self.demonstration_hdf5 = demonstration_hdf5
 
         self.demonstrations = {"actions": [],
                                "observations": [],
+                               "achieved_goal": [],
                                "desired_goals": []}
         self.online_goal_buffer = []
 
@@ -52,12 +53,14 @@ class HinDRLReplayBuffer(HerReplayBuffer):
             for demo_id in f["data"].keys():
                 actions = np.array(f["data"][demo_id]["actions"])
                 observations = np.array(f["data"][demo_id]["observations"])
+                achieved_goal = np.array(f["data"][demo_id]["achieved_goal"])
                 if "desired_goal" in f["data"][demo_id].keys():
                     desired_goal = np.array(f["data"][demo_id]["desired_goal"])
                 else:
-                    desired_goal = observations[-1]
+                    desired_goal = np.repeat(np.expand_dims(achieved_goal[-1], 0), actions.shape[0], axis=0)
                 self.demonstrations["actions"].append(actions)
                 self.demonstrations["observations"].append(observations)
+                self.demonstrations["achieved_goal"].append(achieved_goal)
                 self.demonstrations["desired_goals"].append(desired_goal)
                 self.online_goal_buffer.append(desired_goal)
                 self.demo_episode_lengths.append(actions.shape[0])
@@ -73,7 +76,7 @@ class HinDRLReplayBuffer(HerReplayBuffer):
         }
         self.hindrl_sampling_strategy = hindrl_sampling_strategy
         if self.hindrl_sampling_strategy == HinDRLSamplingStrategy.JointUnion:
-            self.union_sampling_ratio = 0.5
+            self.union_sampling_ratio = union_sampling_ratio
 
 
         super().__init__(env, buffer_size, goal_selection_strategy=her_sampling_method[self.hindrl_sampling_strategy],
@@ -120,12 +123,12 @@ class HinDRLReplayBuffer(HerReplayBuffer):
         :param num_of_goals: Number of sampled goals
         :return: Sampled goals (np.array)
         """
-        demonstrations = self.demonstrations["observations"]
-        num_of_demonstrations = len(demonstrations)
+        demo_achieved_goals = self.demonstrations["achieved_goal"]
+        num_of_demonstrations = len(demo_achieved_goals)
         demonstration_indices = np.random.randint(low=0, high=num_of_demonstrations, size=num_of_goals)
 
         goals = []
-        for i, demo in enumerate(demonstrations):
+        for i, demo in enumerate(demo_achieved_goals):
             goal_num_from_demo = (demonstration_indices == i).sum()
             goal_indices = np.random.randint(0, demo.shape[0]-1, goal_num_from_demo)
             goal_array = np.take(demo, goal_indices, axis=0)
@@ -138,17 +141,17 @@ class HinDRLReplayBuffer(HerReplayBuffer):
     def _load_demonstrations_to_buffer(self):
         for episode_idx in range(len(self.demonstrations["observations"])):
             episode_observations = self.demonstrations["observations"][episode_idx]
+            episode_achieved_goal = self.demonstrations["achieved_goal"][episode_idx]
             episode_actions = self.demonstrations["actions"][episode_idx]
             episode_goals = self.demonstrations["desired_goals"][episode_idx]
             for timestep_idx in range(episode_observations.shape[0]):
-                warnings.warn("Check desired goal, whether correct.")
                 obs = {"observation": episode_observations[timestep_idx],
-                       "achieved_goal": episode_observations[timestep_idx],
+                       "achieved_goal": episode_achieved_goal[timestep_idx],
                        "desired_goal": episode_goals[timestep_idx]}
                 action = episode_actions[timestep_idx]
                 if timestep_idx != (episode_observations.shape[0] - 1):
                     next_obs = {"observation": episode_observations[timestep_idx + 1],
-                                "achieved_goal": episode_observations[timestep_idx + 1],
+                                "achieved_goal": episode_achieved_goal[timestep_idx + 1],
                                 "desired_goal": episode_goals[timestep_idx]}
                     reward = 0  # Reward is always 0 until the last timestep
                     done = 0

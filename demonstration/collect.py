@@ -98,6 +98,7 @@ def gather_demonstrations_as_hdf5(directory, out_dir, env_info):
         states = []
         actions = []
         observation = []
+        achieved_goal = []
         desired_goal = []
 
         for state_file in sorted(glob(state_paths)):
@@ -108,6 +109,7 @@ def gather_demonstrations_as_hdf5(directory, out_dir, env_info):
             for ai in dic["action_infos"]:
                 actions.append(ai["actions"])
                 observation.append(ai["observation"])
+                achieved_goal.append(ai["achieved_goal"])
                 if "desired_goal" in ai.keys():
                     desired_goal.append(ai["desired_goal"])
 
@@ -139,6 +141,7 @@ def gather_demonstrations_as_hdf5(directory, out_dir, env_info):
         ep_data_grp.create_dataset("states", data=np.array(states))
         ep_data_grp.create_dataset("actions", data=np.array(actions))
         ep_data_grp.create_dataset("observations", data=np.array(observation))
+        ep_data_grp.create_dataset("achieved_goal", data=np.array(achieved_goal))
         if len(desired_goal) > 0:
             ep_data_grp.create_dataset("desired_goal", data=np.array(desired_goal))
 

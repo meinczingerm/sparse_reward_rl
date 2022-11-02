@@ -38,6 +38,7 @@ class RobosuiteObservationCollectionWrapper(DataCollectionWrapper):
             info = {}
             info["actions"] = np.array(action)
             info["observation"] = ret[0]["observation"]
+            info["achieved_goal"] = ret[0]["achieved_goal"]
             if "desired_goal" in ret[0].keys():
                 info["desired_goal"] = ret[0]["desired_goal"]
             self.action_infos.append(info)

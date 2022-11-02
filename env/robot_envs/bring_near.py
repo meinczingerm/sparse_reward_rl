@@ -56,7 +56,7 @@ class BringNearEnv(CableManipulationBase):
         x_vector = np.array([[1, 0, 0]])
         y_vector = np.array([[0, 1, 0]])
 
-        return np.hstack([(x_vector @ mat).squeeze(), (y_vector @ mat).squeeze()])
+        return np.hstack([(x_vector @ mat.T).squeeze(), (y_vector @ mat.T).squeeze()])
 
 
     def _get_custom_encoding(self):

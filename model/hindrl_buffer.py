@@ -34,6 +34,22 @@ class HinDRLReplayBuffer(HerReplayBuffer):
     def __init__(self, demonstration_hdf5, env, hindrl_sampling_strategy: HinDRLSamplingStrategy,
                  demo_to_rollout_ratio=0.025,
                  buffer_size=int(1e5), union_sampling_ratio=0.5, **kwargs):
+
+
+        her_sampling_method = {
+            HinDRLSamplingStrategy.RolloutConditioned: GoalSelectionStrategy.FUTURE,
+            HinDRLSamplingStrategy.JointUnion: GoalSelectionStrategy.FUTURE,
+            # HER sampling is not used, doesn't matter
+            HinDRLSamplingStrategy.TaskConditioned: GoalSelectionStrategy.FUTURE,
+            HinDRLSamplingStrategy.JointIntersection: GoalSelectionStrategy.FUTURE
+        }
+        self.hindrl_sampling_strategy = hindrl_sampling_strategy
+        if self.hindrl_sampling_strategy == HinDRLSamplingStrategy.JointUnion:
+            self.union_sampling_ratio = union_sampling_ratio
+
+
+        super().__init__(env, buffer_size, goal_selection_strategy=her_sampling_method[self.hindrl_sampling_strategy],
+                         **kwargs)
         self.demonstration_hdf5 = demonstration_hdf5
 
         self.demonstrations = {"actions": [],
@@ -54,6 +70,12 @@ class HinDRLReplayBuffer(HerReplayBuffer):
                 actions = np.array(f["data"][demo_id]["actions"])
                 observations = np.array(f["data"][demo_id]["observations"])
                 achieved_goal = np.array(f["data"][demo_id]["achieved_goal"])
+
+                episode_length = actions.shape[0]
+                if episode_length > self.max_episode_length:
+                    warnings.warn("Demonstration longer than max episode length.")
+                    continue
+
                 if "desired_goal" in f["data"][demo_id].keys():
                     desired_goal = np.array(f["data"][demo_id]["desired_goal"])
                 else:
@@ -63,24 +85,9 @@ class HinDRLReplayBuffer(HerReplayBuffer):
                 self.demonstrations["achieved_goal"].append(achieved_goal)
                 self.demonstrations["desired_goals"].append(desired_goal)
                 self.online_goal_buffer.append(desired_goal)
-                self.demo_episode_lengths.append(actions.shape[0])
+                self.demo_episode_lengths.append(episode_length)
         self.number_of_demonstrations = len(self.demonstrations["actions"])
         self.demo_episode_lengths = np.vstack(self.demo_episode_lengths)
-
-        her_sampling_method = {
-            HinDRLSamplingStrategy.RolloutConditioned: GoalSelectionStrategy.FUTURE,
-            HinDRLSamplingStrategy.JointUnion: GoalSelectionStrategy.FUTURE,
-            # HER sampling is not used, doesn't matter
-            HinDRLSamplingStrategy.TaskConditioned: GoalSelectionStrategy.FUTURE,
-            HinDRLSamplingStrategy.JointIntersection: GoalSelectionStrategy.FUTURE
-        }
-        self.hindrl_sampling_strategy = hindrl_sampling_strategy
-        if self.hindrl_sampling_strategy == HinDRLSamplingStrategy.JointUnion:
-            self.union_sampling_ratio = union_sampling_ratio
-
-
-        super().__init__(env, buffer_size, goal_selection_strategy=her_sampling_method[self.hindrl_sampling_strategy],
-                         **kwargs)
 
         self._demo_buffer = {
             key: np.zeros((self.number_of_demonstrations, self.max_episode_length, *buffer_item.shape[2:]), dtype=np.float32)

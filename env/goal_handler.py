@@ -89,7 +89,7 @@ class HinDRLGoalHandler:
             goal = self.goal_buffer[np.random.randint(0, len(self.goal_buffer)-1)]
         elif self.goal_selection == GoalSelectionMethod.Percentage:
             assert self.percentage_for_rollout_goal != -1
-            rollout = self.achieved_goals[np.random.randint(0, len(self.goal_buffer))]
+            rollout = self.achieved_goals[np.random.randint(0, len(self.achieved_goals))]
 
             # -1 for avoiding over indexing, with percentage 1
             goal = rollout[int(len(rollout) * self.percentage_for_rollout_goal)-1]

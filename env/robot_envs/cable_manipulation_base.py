@@ -358,7 +358,7 @@ class CableManipulationBase(TwoArmEnv):
             picture = self.sim.render(camera_name='frontview', width=500, height=500)
             return np.flip(picture, axis=0)
         else:
-            return super(CableManipulationBase, self).render(mode)
+            return super(CableManipulationBase, self).render()
 
     def _load_model(self):
         """

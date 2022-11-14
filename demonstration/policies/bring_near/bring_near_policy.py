@@ -252,7 +252,7 @@ class BringNearDemonstrationPolicy:
 
 
 if __name__ == '__main__':
-    env = BringNearEnv(has_renderer=True)
+    env = BringNearEnv(has_renderer=True, render_camera=None, control_freq=20)
 
     demonstration_policy = BringNearDemonstrationPolicy()
 

@@ -224,7 +224,7 @@ def train(_config):
     # Use deterministic actions for evaluation
     eval_path = os.path.join(log_dir, 'train_eval')
 
-    video_callback = EvalVideoCallback(0.1, eval_env, best_model_save_path=eval_path,
+    video_callback = EvalVideoCallback(0.2, eval_env, best_model_save_path=eval_path,
                                        log_path=eval_path, eval_freq=_config['eval_freq'],
                                        deterministic=True, render=False)
     eval_callback = EvalCallback(eval_env, best_model_save_path=eval_path,
@@ -374,47 +374,49 @@ if __name__ == '__main__':
         #                           "tau": 0.005,
         #                           }},
                ]
-    configs = [{"env_kwargs": {"horizon": 300},
+    configs = [{"env_kwargs": {"horizon": 300,
+                               "control_freq": 20},
                "goal_handler": HinDRLGoalHandler,
-               "goal_handler_kwargs": {"demonstration_hdf5": "/home/mark/tum/2022ss/thesis/master_thesis/demonstration/collection/BringNear/30_1666187801_2110994/demo.hdf5",
+               "goal_handler_kwargs": {"demonstration_hdf5": "/home/mark/tum/2022ss/thesis/master_thesis/demonstration/collection/BringNear/30_1667825795_8654132/demo.hdf5",
                                        "m": 10, "k": 1},
                 "env_class": BringNearEnv,
                 "number_of_demonstrations": 30,
                 "regenerate_demonstrations": False,
-                "demo_path": "/home/mark/tum/2022ss/thesis/master_thesis/demonstration/collection/BringNear/30_1666187801_2110994/demo.hdf5",
+                "demo_path": "/home/mark/tum/2022ss/thesis/master_thesis/demonstration/collection/BringNear/30_1667825795_8654132/demo.hdf5",
                 "expert_policy": BringNearDemonstrationPolicy(),
-                "eval_freq": 10000,
+                "eval_freq": 300,
                 "n_eval_episodes": 5,
                 "model_kwargs": {"gradient_steps": 1,
                                  "batch_size": 12000,
                                  "learning_rate": 1e-3,
-                                 "lambda_bc": 1,
-                                 "policy_kwargs": {"net_arch": [128, 128, 128, 128, 128, 128]},
-                                 "learning_starts": 5000,
-                                 "buffer_size": int(5e5),
+                                 "lambda_bc": 0,
+                                 "policy_kwargs": {"net_arch": [128, 128, 128, 128, 128, 128, 128]},
+                                 "learning_starts": 300,
+                                 "buffer_size": int(1e6),
                                  "max_demo_ratio": 0.1,
                                  "reach_zero": 1e6,
                                  "n_sampled_goal": 8,
                                  "hindrl_sampling_strategy": HinDRLSamplingStrategy.TaskConditioned,
                                  "tau": 0.005,
                                  }},
-               {"env_kwargs": {"horizon": 300},
+               {"env_kwargs": {"horizon": 500,
+                               "control_freq": 20},
                 "goal_handler": HinDRLGoalHandler,
                 "goal_handler_kwargs": {
-                    "demonstration_hdf5": "/home/mark/tum/2022ss/thesis/master_thesis/demonstration/collection/BringNear/30_1666187801_2110994/demo.hdf5",
-                    "m": 10, "k": 1},
+                    "demonstration_hdf5": "/home/mark/tum/2022ss/thesis/master_thesis/demonstration/collection/BringNear/30_1667825795_8654132/demo.hdf5",
+                    "m": 10, "k": 2},
                 "env_class": BringNearEnv,
                 "number_of_demonstrations": 30,
                 "regenerate_demonstrations": False,
-                "demo_path": "/home/mark/tum/2022ss/thesis/master_thesis/demonstration/collection/BringNear/30_1666187801_2110994/demo.hdf5",
+                "demo_path": "/home/mark/tum/2022ss/thesis/master_thesis/demonstration/collection/BringNear/30_1667825795_8654132/demo.hdf5",
                 "expert_policy": BringNearDemonstrationPolicy(),
-                "eval_freq": 10000,
+                "eval_freq": 50000,
                 "n_eval_episodes": 5,
                 "model_kwargs": {"gradient_steps": 1,
                                  "batch_size": 12000,
                                  "learning_rate": 1e-3,
                                  "lambda_bc": 1,
-                                 "policy_kwargs": {"net_arch": [128, 128, 128, 128, 128]},
+                                 "policy_kwargs": {"net_arch": [128, 128, 128, 128, 128, 128, 128]},
                                  "learning_starts": 5000,
                                  "buffer_size": int(1e6),
                                  "max_demo_ratio": 0.1,
@@ -425,6 +427,6 @@ if __name__ == '__main__':
                                  }},
                ]
 
-    run_parallel(configs)
-    # train(configs[0])
+    # run_parallel(configs)
+    train(configs[0])
     # load_and_eval("/home/mark/tum/2022ss/thesis/master_thesis/training_logs/ParameterizedReach_2Waypoint_279")

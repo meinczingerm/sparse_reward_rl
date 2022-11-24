@@ -189,9 +189,12 @@ class DPGfD(TQC):
 
 def train(_config):
     env = make_vec_env(_config['env_class'], env_kwargs=_config['env_kwargs'], n_envs=1)
+    assert len(env.envs) == 1
     if _config["regenerate_demonstrations"]:
         assert _config["demo_path"] is None
         expert_policy = _config["expert_policy"]
+        if hasattr(expert_policy, "add_env"):
+            expert_policy.add_env(env.envs[0].env)
         demo_path = _collect_demonstration(env.envs[0].env, demonstration_policy=expert_policy,
                                            episode_num=_config["number_of_demonstrations"])
     else:
@@ -224,9 +227,9 @@ def train(_config):
     # Use deterministic actions for evaluation
     eval_path = os.path.join(log_dir, 'train_eval')
 
-    video_callback = EvalVideoCallback(0.1, eval_env, best_model_save_path=eval_path,
+    video_callback = EvalVideoCallback(0.2, eval_env, best_model_save_path=eval_path,
                                        log_path=eval_path, eval_freq=_config['eval_freq'],
-                                       deterministic=True, render=False)
+                                       deterministic=False, frames_to_save=eval_env_config["horizon"], render=False)
     eval_callback = EvalCallback(eval_env, best_model_save_path=eval_path,
                                  log_path=eval_path, eval_freq=_config['eval_freq'],
                                  n_eval_episodes=_config['n_eval_episodes'], deterministic=True,

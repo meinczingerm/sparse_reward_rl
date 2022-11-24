@@ -10,7 +10,7 @@ import matplotlib.pyplot as plt
 from stable_baselines3 import *
 from stable_baselines3.common.env_util import make_vec_env
 
-def save_result_gif(env, model, path, filename, frames_to_save=100):
+def save_result_gif(env, model, path, filename, frames_to_save=100, deterministic=True):
     """
     Saving result example as gif.
     :param env: gym environment
@@ -28,7 +28,7 @@ def save_result_gif(env, model, path, filename, frames_to_save=100):
     for t in range(frames_to_save):
         # Render to frames buffer
         frames.append(env.render(mode='rgb'))
-        action, _state = model.predict(obs, deterministic=True)
+        action, _state = model.predict(obs, deterministic=deterministic)
         obs, _, done, _ = env.step(action)
         if done:
             obs = env.reset()

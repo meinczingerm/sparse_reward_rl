@@ -34,7 +34,7 @@ class ParameterizedReachEnv(SingleArmEnv):
         render_collision_mesh=False,
         render_visual_mesh=True,
         render_gpu_device_id=-1,
-        control_freq=10,
+        control_freq=20,
         horizon=1000,
         ignore_done=False,
         hard_reset=True,
@@ -48,8 +48,8 @@ class ParameterizedReachEnv(SingleArmEnv):
     ):
         self.name = f"ParameterizedReach_{number_of_waypoints}Waypoint"
         self.goal_handler = goal_handler
-        self.success_pos_dist_limit = 0.05
-        self.success_angle_dist_limit = 0.02
+        self.success_pos_dist_limit = 0.02
+        self.success_angle_dist_limit = 0.05
 
         self.use_engineered_observation_encoding = use_engineered_observation_encoding
         self.number_of_waypoints = number_of_waypoints  # including the final goal pose
@@ -145,7 +145,7 @@ class ParameterizedReachEnv(SingleArmEnv):
         eef_quat = T.convert_quat(self.sim.data.get_body_xquat(self.robots[0].robot_model.eef_name), to="xyzw")
         return eef_quat
 
-    def _get_desired_goal(self):
+    def _get_next_goal(self):
         if self._check_success():
             return np.zeros(self.observation_space["observation"].shape)
         desired_pose = self.goal_poses[self.idx_of_reached_waypoint + 1]
@@ -188,7 +188,7 @@ class ParameterizedReachEnv(SingleArmEnv):
     def _check_reached_next_goal(self):
         gripper_pos = self._eef_xpos
         gripper_axis_angle = T.quat2axisangle(self._eef_xquat)
-        desired_goal = self._get_desired_goal()
+        desired_goal = self._get_next_goal()
         desired_pos = desired_goal[0:3]
         desired_axis_angle = desired_goal[3:6]
         return self._check_reached_pose(gripper_pos, desired_pos, gripper_axis_angle, desired_axis_angle)
@@ -198,6 +198,9 @@ class ParameterizedReachEnv(SingleArmEnv):
         axis_angle_dist = np.linalg.norm(gripper_axis_angle - desired_axis_angle)
 
         return pos_dist < self.success_pos_dist_limit and axis_angle_dist < self.success_angle_dist_limit
+
+    def _get_desired_goal(self):
+        return self._get_next_goal()
 
 
     def _check_success(self):
@@ -273,7 +276,7 @@ class ParameterizedReachEnv(SingleArmEnv):
         capsules = []
         for i, _goal_pose in enumerate(self.goal_poses):
             capsule = CapsuleObject(f"goal_{i}", size=np.array([0.01, 0.02]), joints=None, obj_type="visual",
-                                    rgba=[0, 1, 0, i+1 / self.number_of_waypoints+1])
+                                    rgba=np.array([0, 1, 0, (i+1) / (self.number_of_waypoints+1)], dtype=np.float))
             goal_quat = T.axisangle2quat(_goal_pose[3:])
             capsule._obj.attrib["quat"] = f"{goal_quat[3]} {goal_quat[0]} {goal_quat[1]} {goal_quat[2]}"
             capsule._obj.attrib["pos"] = f"{_goal_pose[0]} {_goal_pose[1]} {_goal_pose[2]}"
@@ -314,6 +317,7 @@ class ParameterizedReachEnv(SingleArmEnv):
         @sensor(modality=modality)
         def get_desired_goal(obs_cache):
             return self._get_desired_goal()
+
 
         if self.use_engineered_observation_encoding:
             sensors = [engineered_encoding, engineered_encoding, get_desired_goal]

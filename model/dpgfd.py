@@ -25,7 +25,7 @@ from env.robot_envs.parameterized_reach import ParameterizedReachEnv
 from eval import EvalVideoCallback
 from model.hindrl_buffer import HinDRLReplayBuffer, HinDRLSamplingStrategy
 from train import _collect_demonstration
-from utils import create_log_dir, save_dict
+from utils import create_log_dir, save_dict, SaveBestModelAccordingRollouts
 
 
 class DPGfD(TQC):
@@ -237,7 +237,8 @@ def train(_config):
                                  log_path=eval_path, eval_freq=_config['eval_freq'],
                                  n_eval_episodes=_config['n_eval_episodes'], deterministic=True,
                                  render=False)
-    eval_callbacks = CallbackList([eval_callback, video_callback])
+    best_rollout_reward_save_callback = SaveBestModelAccordingRollouts(best_model_save_path=eval_path)
+    eval_callbacks = CallbackList([eval_callback, video_callback, best_rollout_reward_save_callback])
 
     model.learn(50000000, callback=eval_callbacks)
 

@@ -10,6 +10,7 @@ from stable_baselines3.common.callbacks import EvalCallback, CallbackList
 from stable_baselines3.common.env_util import make_vec_env
 from stable_baselines3.common.evaluation import evaluate_policy
 from stable_baselines3.common.monitor import Monitor
+from stable_baselines3.common.noise import NormalActionNoise
 from stable_baselines3.common.utils import polyak_update
 
 from demonstration.policies.bring_near.bring_near_policy import BringNearDemonstrationPolicy
@@ -65,7 +66,7 @@ class DPGfD(TQC):
                                                     buffer_size=int(buffer_size),
                                                     hindrl_sampling_strategy=hindrl_sampling_strategy,
                                                     union_sampling_ratio=union_sampling_ratio)
-        print(f"Model initialized {model_id}")
+            print(f"Model initialized {model_id}")
 
 
     def train(self, gradient_steps: int, batch_size: int = 64) -> None:
@@ -251,12 +252,14 @@ def run_parallel(_configs):
 
 
 def load_and_eval(log_dir, eval_episodes=100):
-    checkpoint_path = os.path.join(log_dir, "train_eval", "best_model.zip")
-    env = ParameterizedReachEnv(number_of_waypoints=2, horizon=200)
+    checkpoint_path = os.path.join(log_dir, "train_eval", "best_rollout_model.zip")
+    env = FixedParameterizedReachEnv(horizon=300, number_of_waypoints=2,
+                       waypoints= [np.array([0.58766, 0.26816, 0.37820, 2.89549, 0.03567, -0.39348]),
+                                     np.array([0.42493, 0.07166, 0.36318, 2.88426, 0.12777, 0.35920])])
 
     model = DPGfD.load(checkpoint_path, env=env)
 
-    rewards, ep_lengths = evaluate_policy(model, env, n_eval_episodes=eval_episodes, return_episode_rewards=True)
+    rewards, ep_lengths = evaluate_policy(model, env, n_eval_episodes=eval_episodes, return_episode_rewards=True, deterministic=False)
 
     eval_result = {"mean_length": sum(ep_lengths)/len(ep_lengths),
                    "success_rate": sum(rewards)/len(rewards),
@@ -381,118 +384,121 @@ if __name__ == '__main__':
         #                           "tau": 0.005,
         #                           }},
         #        ]
-    # configs = [{"env_kwargs": {"horizon": 300},
-    #            "goal_handler": HinDRLGoalHandler,
-    #            "goal_handler_kwargs": {"demonstration_hdf5": "/home/mark/tum/2022ss/thesis/master_thesis/demonstration/collection/BringNear/30_1666187801_2110994/demo.hdf5",
-    #                                    "m": 10, "k": 1},
-    #             "env_class": BringNearEnv,
-    #             "number_of_demonstrations": 30,
-    #             "regenerate_demonstrations": False,
-    #             "demo_path": "/home/mark/tum/2022ss/thesis/master_thesis/demonstration/collection/BringNear/30_1666187801_2110994/demo.hdf5",
-    #             "expert_policy": BringNearDemonstrationPolicy(),
-    #             "eval_freq": 10000,
-    #             "n_eval_episodes": 5,
-    #             "model_kwargs": {"gradient_steps": 1,
-    #                              "batch_size": 12000,
-    #                              "learning_rate": 1e-3,
-    #                              "lambda_bc": 1,
-    #                              "policy_kwargs": {"net_arch": [128, 128, 128, 128, 128, 128]},
-    #                              "learning_starts": 5000,
-    #                              "buffer_size": int(5e5),
-    #                              "max_demo_ratio": 0.1,
-    #                              "reach_zero": 1e6,
-    #                              "n_sampled_goal": 8,
-    #                              "hindrl_sampling_strategy": HinDRLSamplingStrategy.TaskConditioned,
-    #                              "tau": 0.005,
-    #                              }},
-    #            {"env_kwargs": {"horizon": 300},
-    #             "goal_handler": HinDRLGoalHandler,
-    #             "goal_handler_kwargs": {
-    #                 "demonstration_hdf5": "/home/mark/tum/2022ss/thesis/master_thesis/demonstration/collection/BringNear/30_1666187801_2110994/demo.hdf5",
-    #                 "m": 10, "k": 1},
-    #             "env_class": BringNearEnv,
-    #             "number_of_demonstrations": 30,
-    #             "regenerate_demonstrations": False,
-    #             "demo_path": "/home/mark/tum/2022ss/thesis/master_thesis/demonstration/collection/BringNear/30_1666187801_2110994/demo.hdf5",
-    #             "expert_policy": BringNearDemonstrationPolicy(),
-    #             "eval_freq": 10000,
-    #             "n_eval_episodes": 5,
-    #             "model_kwargs": {"gradient_steps": 1,
-    #                              "batch_size": 12000,
-    #                              "learning_rate": 1e-3,
-    #                              "lambda_bc": 1,
-    #                              "policy_kwargs": {"net_arch": [128, 128, 128, 128, 128]},
-    #                              "learning_starts": 5000,
-    #                              "buffer_size": int(1e6),
-    #                              "max_demo_ratio": 0.1,
-    #                              "reach_zero": 1e6,
-    #                              "n_sampled_goal": 8,
-    #                              "hindrl_sampling_strategy": HinDRLSamplingStrategy.TaskConditioned,
-    #                              "tau": 0.005,
-    #                              }},
-    #            ]
-
-    configs = [               {"env_kwargs": {"horizon": 200, "number_of_waypoints": 2,
-                       "waypoints": [np.array([0.58766, 0.26816, 0.37820, 2.89549, 0.03567, -0.39348]),
-                                     np.array([0.42493, 0.07166, 0.36318, 2.88426, 0.12777, 0.35920])]
-                       },
-        "goal_handler": HinDRLGoalHandler,
-        "goal_handler_kwargs": {
-            "demonstration_hdf5": "/home/mark/tum/2022ss/thesis/master_thesis/demonstration/collection/FixedParameterizedReach_2Waypoint/30_1669196843_0558183/demo.hdf5",
-            "m": 5, "k": 1},
-        "env_class": FixedParameterizedReachEnv,
-        "number_of_demonstrations": 30,
-        "regenerate_demonstrations": False,
-        "demo_path": "/home/mark/tum/2022ss/thesis/master_thesis/demonstration/collection/FixedParameterizedReach_2Waypoint/30_1669196843_0558183/demo.hdf5",
-        "expert_policy": FixedParameterizedReachDemonstrationPolicy(env=None, randomness_scale=0),
-        "eval_freq": 50000,
-        "n_eval_episodes": 5,
-        "model_kwargs": {"gradient_steps": 1,
-                         "batch_size": 12000,
-                         "learning_rate": 1e-3,
-                         "lambda_bc": 1,
-                         "policy_kwargs": {"net_arch": [64, 64, 64, 64, 64, 64, 64, 64]},
-                         "learning_starts": 5000,
-                         "buffer_size": int(1e6),
-                         "max_demo_ratio": 0.1,
-                         "reach_zero": 1e6,
-                         "n_sampled_goal": 8,
-                         "hindrl_sampling_strategy": HinDRLSamplingStrategy.TaskConditioned,
-                         "tau": 0.005,
-                         }},
-          {"env_kwargs": {"horizon": 200, "number_of_waypoints": 2,
-                          "waypoints": [
-                              np.array([0.58766, 0.26816, 0.37820, 2.89549, 0.03567, -0.39348]),
-                              np.array([0.42493, 0.07166, 0.36318, 2.88426, 0.12777, 0.35920])]
-                          },
-           "goal_handler": HinDRLGoalHandler,
-           "goal_handler_kwargs": {
-               "demonstration_hdf5": "/home/mark/tum/2022ss/thesis/master_thesis/demonstration/collection/FixedParameterizedReach_2Waypoint/30_1669196843_0558183/demo.hdf5",
-               "m": 5, "k": 1},
-           "env_class": FixedParameterizedReachEnv,
-           "number_of_demonstrations": 30,
-           "regenerate_demonstrations": False,
-           "demo_path": "/home/mark/tum/2022ss/thesis/master_thesis/demonstration/collection/FixedParameterizedReach_2Waypoint/30_1669196843_0558183/demo.hdf5",
-           "expert_policy": FixedParameterizedReachDemonstrationPolicy(env=None,
-                                                                       randomness_scale=0),
-           "eval_freq": 50000,
-           "n_eval_episodes": 5,
-           "model_kwargs": {"gradient_steps": 1,
-                            "batch_size": 12000,
-                            "learning_rate": 1e-3,
-                            "lambda_bc": 1,
-                            "policy_kwargs": {"net_arch": [64, 64, 64, 64, 64, 64, 64, 64]},
-                            "learning_starts": 5000,
-                            "buffer_size": int(1e6),
-                            "max_demo_ratio": 0.1,
-                            "reach_zero": 1e6,
-                            "n_sampled_goal": 8,
-                            "action_noise": noise.NormalActionNoise(0, 0.1),
-                            "hindrl_sampling_strategy": HinDRLSamplingStrategy.TaskConditioned,
-                            "tau": 0.005,
-                            }},
+    configs = [
+            {"env_kwargs": {"horizon": 300},
+               "goal_handler": HinDRLGoalHandler,
+               "goal_handler_kwargs": {"demonstration_hdf5": "/home/mark/tum/2022ss/thesis/master_thesis/demonstration/collection/BringNear/100_1671095967_5822322/demo.hdf5",
+                                       "m": 10, "k": 1},
+                "env_class": BringNearEnv,
+                "number_of_demonstrations": 100,
+                "regenerate_demonstrations": False,
+                "demo_path": "/home/mark/tum/2022ss/thesis/master_thesis/demonstration/collection/BringNear/100_1671095967_5822322/demo.hdf5",
+                "expert_policy": BringNearDemonstrationPolicy(),
+                "eval_freq": 50000,
+                "n_eval_episodes": 5,
+                "model_kwargs": {"gradient_steps": 1,
+                                 "batch_size": 12000,
+                                 "learning_rate": 1e-3,
+                                 "lambda_bc": 0,
+                                 "policy_kwargs": {"net_arch": [128, 64, 64, 32, 32, 32, 32, 32]},
+                                 "top_quantiles_to_drop_per_net": 8,
+                                 "learning_starts": 5000,
+                                 "buffer_size": int(1e6),
+                                 "max_demo_ratio": 0.2,
+                                 "reach_zero": 1e6,
+                                 "n_sampled_goal": 8,
+                                 "hindrl_sampling_strategy": HinDRLSamplingStrategy.TaskConditioned,
+                                 "tau": 0.005,
+                                 }},
+        {"env_kwargs": {"horizon": 300},
+         "goal_handler": HinDRLGoalHandler,
+         "goal_handler_kwargs": {
+             "demonstration_hdf5": "/home/mark/tum/2022ss/thesis/master_thesis/demonstration/collection/BringNear/1_1671095967_5463316/demo.hdf5",
+             "m": 10, "k": 1},
+         "env_class": BringNearEnv,
+         "number_of_demonstrations": 1,
+         "regenerate_demonstrations": False,
+         "demo_path": "/home/mark/tum/2022ss/thesis/master_thesis/demonstration/collection/BringNear/1_1671095967_5463316/demo.hdf5",
+         "expert_policy": BringNearDemonstrationPolicy(),
+         "eval_freq": 50000,
+         "n_eval_episodes": 5,
+         "model_kwargs": {"gradient_steps": 1,
+                          "batch_size": 12000,
+                          "learning_rate": 1e-3,
+                          "lambda_bc": 0,
+                          "policy_kwargs": {"net_arch": [128, 64, 64, 32, 32, 32, 32, 32]},
+                          "top_quantiles_to_drop_per_net": 8,
+                          "learning_starts": 5000,
+                          "buffer_size": int(1e6),
+                          "max_demo_ratio": 0.2,
+                          "reach_zero": 1e6,
+                          "n_sampled_goal": 8,
+                          "hindrl_sampling_strategy": HinDRLSamplingStrategy.TaskConditioned,
+                          "tau": 0.005,
+                          }},
                ]
 
+    # configs = [
+    #     {"env_kwargs": {"horizon": 300, "number_of_waypoints": 2,
+    #                     "waypoints": [np.array([0.58766, 0.26816, 0.37820, 2.89549, 0.03567, -0.39348]),
+    #                                   np.array([0.42493, 0.07166, 0.36318, 2.88426, 0.12777, 0.35920])]
+    #                     },
+    #      "goal_handler": HinDRLGoalHandler,
+    #      "goal_handler_kwargs": {
+    #          "demonstration_hdf5": None,
+    #          "m": 5, "k": 0},
+    #      "env_class": FixedParameterizedReachEnv,
+    #      "number_of_demonstrations": 5,
+    #      "regenerate_demonstrations": True,
+    #      "demo_path": None,
+    #      "expert_policy": FixedParameterizedReachDemonstrationPolicy(env=None, randomness_scale=0),
+    #      "eval_freq": 50000,
+    #      "n_eval_episodes": 5,
+    #      "model_kwargs": {"gradient_steps": 1,
+    #                       "batch_size": 12000,
+    #                       "learning_rate": 1e-3,
+    #                       "lambda_bc": 0,
+    #                       "policy_kwargs": {"net_arch": [32, 32, 32, 32, 32, 32, 32, 32]},
+    #                       "top_quantiles_to_drop_per_net": 8,
+    #                       "learning_starts": 5000,
+    #                       "buffer_size": int(1e6),
+    #                       "max_demo_ratio": 0.1,
+    #                       "reach_zero": 1e6,
+    #                       "n_sampled_goal": 4,
+    #                       "hindrl_sampling_strategy": HinDRLSamplingStrategy.TaskConditioned,
+    #                       "tau": 0.005,
+    #                       }},
+    #     {"env_kwargs": {"horizon": 300, "number_of_waypoints": 2,
+    #                     "waypoints": [np.array([0.58766, 0.26816, 0.37820, 2.89549, 0.03567, -0.39348]),
+    #                                   np.array([0.42493, 0.07166, 0.36318, 2.88426, 0.12777, 0.35920])]
+    #                     },
+    #      "goal_handler": HinDRLGoalHandler,
+    #      "goal_handler_kwargs": {
+    #          "demonstration_hdf5": None,
+    #          "m": 5, "k": 0},
+    #      "env_class": FixedParameterizedReachEnv,
+    #      "number_of_demonstrations": 5,
+    #      "regenerate_demonstrations": True,
+    #      "demo_path": None,
+    #      "expert_policy": FixedParameterizedReachDemonstrationPolicy(env=None, randomness_scale=0),
+    #      "eval_freq": 50000,
+    #      "n_eval_episodes": 5,
+    #      "model_kwargs": {"gradient_steps": 1,
+    #                       "batch_size": 12000,
+    #                       "learning_rate": 1e-3,
+    #                       "lambda_bc": 0,
+    #                       "policy_kwargs": {"net_arch": [32, 32, 32, 32, 32, 32, 32, 32]},
+    #                       "top_quantiles_to_drop_per_net": 2,
+    #                       "learning_starts": 5000,
+    #                       "buffer_size": int(1e6),
+    #                       "max_demo_ratio": 0.1,
+    #                       "reach_zero": 1e6,
+    #                       "n_sampled_goal": 4,
+    #                       "hindrl_sampling_strategy": HinDRLSamplingStrategy.TaskConditioned,
+    #                       "tau": 0.005,
+    #                       }},
+    #            ]
+
     run_parallel(configs)
-    # train(configs[1])
-    # load_and_eval("/home/mark/tum/2022ss/thesis/master_thesis/training_logs/ParameterizedReach_2Waypoint_279")
+    # train(configs[0])
+    # load_and_eval("/home/mark/tum/2022ss/thesis/master_thesis/training_logs/FixedParameterizedReach_2Waypoint_168")

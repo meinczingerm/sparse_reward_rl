@@ -11,18 +11,18 @@ class BringNearEnv(CableManipulationBase):
 
     def _get_observation_space(self):
         obs_low_limits = np.array([-2, -2, -2, -1, -1, -1, -1, -1, -1, -2, -2, -2, -1, -1, -1, -1, -1, -1, -2, -2, -2,
-                                   -2, -2, -2, -2, -2, -2, 0, 0])
+                                   -2, -2, -2, -2, -2, -2, 0, 0, 0, 0])
         obs_high_limits = np.array([2, 2, 2, 1, 1, 1, 1, 1, 1, 2, 2, 2, 1, 1, 1, 1, 1, 1, 2, 2, 2, 2, 2, 2, 2, 2, 2, 1,
-                                    1])
+                                    1, 0.11, 0.11])
         observation_space = spaces.Dict(
             dict(observation=spaces.Box(
-                    obs_low_limits, obs_high_limits, shape=(29,), dtype="float32"
+                    obs_low_limits, obs_high_limits, shape=(31,), dtype="float32"
                 ),
                 desired_goal=spaces.Box(
-                    obs_low_limits, obs_high_limits, shape=(29,), dtype="float32"
+                    obs_low_limits, obs_high_limits, shape=(31,), dtype="float32"
                 ),
                 achieved_goal=spaces.Box(
-                    obs_low_limits, obs_high_limits, shape=(29,), dtype="float32"
+                    obs_low_limits, obs_high_limits, shape=(31,), dtype="float32"
                 )
             )
         )
@@ -81,8 +81,20 @@ class BringNearEnv(CableManipulationBase):
         grasp_mother = self._check_grasp(self.robots[0].gripper, "cable_stand_mother_contact")
         grasp_father = self._check_grasp(self.robots[1].gripper, "cable_stand_father_contact")
 
+        robot0_left_finger_id = self.sim.model.geom_name2id(self.robots[0].gripper.important_geoms["left_finger"][0])
+        robot0_left_finger_pos = np.array(self.sim.data.geom_xpos[robot0_left_finger_id])
+        robot0_right_finger_id = self.sim.model.geom_name2id(self.robots[0].gripper.important_geoms["right_finger"][0])
+        robot0_right_finger_pos = np.array(self.sim.data.geom_xpos[robot0_right_finger_id])
+        robot0_finger_dist = np.linalg.norm(robot0_left_finger_pos - robot0_right_finger_pos)
+
+        robot1_left_finger_id = self.sim.model.geom_name2id(self.robots[1].gripper.important_geoms["left_finger"][0])
+        robot1_left_finger_pos = np.array(self.sim.data.geom_xpos[robot1_left_finger_id])
+        robot1_right_finger_id = self.sim.model.geom_name2id(self.robots[1].gripper.important_geoms["right_finger"][0])
+        robot1_right_finger_pos = np.array(self.sim.data.geom_xpos[robot1_right_finger_id])
+        robot1_finger_dist = np.linalg.norm(robot1_left_finger_pos - robot1_right_finger_pos)
+
         encoding = np.hstack([distance_to_mother_grip, distance_to_father_grip, distance_between_cable_tips,
-                              grasp_mother, grasp_father])
+                              grasp_mother, grasp_father, robot0_finger_dist, robot1_finger_dist])
         return encoding
 
     def get_engineered_encoding(self):

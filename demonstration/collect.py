@@ -109,7 +109,10 @@ def gather_demonstrations_as_hdf5(directory, out_dir, env_info):
             for ai in dic["action_infos"]:
                 actions.append(ai["actions"])
                 observation.append(ai["observation"])
-                achieved_goal.append(ai["achieved_goal"])
+                if "achieved_goal" in ai.keys():
+                    achieved_goal.append(ai["achieved_goal"])
+                else:
+                    achieved_goal.append(ai["observation"])
                 if "desired_goal" in ai.keys():
                     desired_goal.append(ai["desired_goal"])
 

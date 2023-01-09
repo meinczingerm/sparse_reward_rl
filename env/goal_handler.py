@@ -98,8 +98,9 @@ class HinDRLGoalHandler:
         return goal
 
 
-class DefinedDistanceGoalHandler:
-    def __init__(self, epsilon):
+class DefinedDistanceGoalHandler(HinDRLGoalHandler):
+    def __init__(self, epsilon, demonstration_hdf5=None):
+        super(DefinedDistanceGoalHandler, self).__init__(demonstration_hdf5=demonstration_hdf5, m=0, k=0)
         self.epsilon = epsilon
 
     def compute_reward(self, achieved_goal, goal, infos):

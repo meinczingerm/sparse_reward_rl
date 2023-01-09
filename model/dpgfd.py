@@ -51,6 +51,9 @@ class DPGfD(TQC):
             del model_kwargs["hindrl_sampling_strategy"]
             n_sampled_goal = model_kwargs["n_sampled_goal"]
             del model_kwargs["n_sampled_goal"]
+            epsilon_filtering = model_kwargs["epsilon_filtering"]
+            del model_kwargs["epsilon_filtering"]
+
             model_id = model_kwargs.get("model_id", -1)
             if "model_id" in model_kwargs.keys():
                 del model_kwargs["model_id"]
@@ -65,7 +68,8 @@ class DPGfD(TQC):
                                                     max_episode_length=env.envs[0].horizon, device="cuda",
                                                     buffer_size=int(buffer_size),
                                                     hindrl_sampling_strategy=hindrl_sampling_strategy,
-                                                    union_sampling_ratio=union_sampling_ratio)
+                                                    union_sampling_ratio=union_sampling_ratio,
+                                                    epsilon_filtering=epsilon_filtering)
             print(f"Model initialized {model_id}")
 
 

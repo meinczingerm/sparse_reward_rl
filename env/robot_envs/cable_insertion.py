@@ -6,29 +6,24 @@ from gym.vector.utils import spaces
 
 class CableInsertionEnv(CableManipulationBase):
     def _get_observation_space(self):
-        if self.use_desired_goal:
-            observation_space = spaces.Dict(
-                dict(observation=spaces.Box(
-                        -np.inf, np.inf, shape=(7,), dtype="float32"
-                    ),
-                    desired_goal=spaces.Box(
-                        -np.inf, np.inf, shape=(7,), dtype="float32"
-                    ),
-                    achieved_goal=spaces.Box(
-                        -np.inf, np.inf, shape=(7,), dtype="float32"
-                    )
+        observation_space = spaces.Dict(
+            dict(observation=spaces.Box(
+                    -np.inf, np.inf, shape=(7,), dtype="float32"
+                ),
+                desired_goal=spaces.Box(
+                    -np.inf, np.inf, shape=(7,), dtype="float32"
+                ),
+                achieved_goal=spaces.Box(
+                    -np.inf, np.inf, shape=(7,), dtype="float32"
                 )
             )
-        else:
-            observation_space = spaces.Dict(
-                dict(observation=spaces.Box(
-                        -np.inf, np.inf, shape=(7,), dtype="float32"
-                    )
-                )
-            )
+        )
         return observation_space
 
-    def _get_engineered_encoding(self):
+    def get_custom_obs(self):
+        return self.get_engineered_encoding()
+
+    def get_engineered_encoding(self):
         # Important data
         robot0_gripper_pos = self._eef0_xpos
         robot1_gripper_pos = self._eef1_xpos
@@ -76,15 +71,14 @@ class CableInsertionEnv(CableManipulationBase):
         father_tip_ori = self.sim.data.site_xmat[father_tip_id].reshape([3, 3])
         father_tip_z_ori = np.matmul(father_tip_ori, np.array([[0], [1], [0]])) # Z and Y axis is changed in the xml site
 
-        mother_tip_id = self.sim.model.site_name2id(self._important_sites["mother_tip"])
+        mother_tip_id = self.sim.model.site_name2id(self._important_sites["mother_inner_tip"])
         mother_tip_pos = np.array(self.sim.data.site_xpos[mother_tip_id])
         mother_tip_ori = self.sim.data.site_xmat[mother_tip_id].reshape([3, 3])
         mother_tip_z_ori = np.matmul(mother_tip_ori, np.array([[0], [1], [0]])) # Z and Y axis is changed in the xml site
 
-
         pos_error = np.linalg.norm(father_tip_pos-mother_tip_pos, 2)
         ori_error = np.linalg.norm(mother_tip_z_ori + father_tip_z_ori)  # the two z direction has to be oppsite
-        if pos_error < 0.003 and ori_error < 0.03:
+        if pos_error < 0.002 and ori_error < 0.05:
             return True
         else:
             return False

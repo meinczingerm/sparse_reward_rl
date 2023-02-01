@@ -28,7 +28,7 @@ class RobotTarget:
             self.type = "glob"
         else:
             self.type = "rel"
-        self.relative_to = relative_to
+        self.relative = relative_to
 
         self.target_pos = target_pos
         self.target_quat = target_quat
@@ -247,7 +247,7 @@ class IKDemonstrationPolicy:
 
 
 if __name__ == '__main__':
-    env = CableInsertionEnv(has_renderer=True)
+    env = CableInsertionEnv(has_renderer=True, render_camera=None, control_freq=20)
 
     demonstration_policy = IKDemonstrationPolicy()
 

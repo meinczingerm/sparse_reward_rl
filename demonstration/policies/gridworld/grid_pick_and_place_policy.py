@@ -5,6 +5,9 @@ from env.grid_world_envs.pick_and_place import GridPickAndPlace
 
 
 class GridPickAndPlacePolicy:
+    """
+    Policy used for generating demonstrations for the GridPickAndPlace and the FixedGridPickAndPlace envs.
+    """
     def __init__(self, random_action_probability=0.2):
         """
         Init.

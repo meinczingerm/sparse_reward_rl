@@ -28,6 +28,10 @@ def check_avg_len(env, demonstration_policy, num_of_averaging_steps=2):
 
 
 def check_frequency():
+    """
+    Returns the average len (number of steps) for a demonstration with given config.
+    :return:
+    """
     env = ParameterizedReachEnv()
     demonstration_policy = ParameterizedReachDemonstrationPolicy()
 

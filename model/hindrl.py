@@ -30,6 +30,9 @@ from utils import create_log_dir, save_dict, SaveBestModelAccordingRollouts
 
 
 class HinDRL(TQC):
+    """HinDRL (a Hindsight Goal Selection for Demo-Driven RL) model (based on the work of Davchev et al:
+    https://arxiv.org/pdf/2112.00597.pdf). The model is a combination of a TQC RL algorithm and a modified
+    HinDRL buffer. For clear difference to the original HinDRL model we suggest reading the Thesis itself."""
     def __init__(self, demonstration_hdf5=None, env=None, model_kwargs=None, policy="MultiInputPolicy", device="cuda",
                  _init_setup_model=False):
         if _init_setup_model is not False:
@@ -192,7 +195,7 @@ class HinDRL(TQC):
             self.logger.record("train/ent_coef_loss", np.mean(ent_coef_losses))
 
         demo_to_rollout_ratio = max([self.max_demo_ratio * (1 - self.num_timesteps / self.reach_zero), 0])
-        self.replay_buffer.demo_to_rollout_sample_ratio = demo_to_rollout_ratio
+        self.replay_buffer.relabeling_ratio = demo_to_rollout_ratio
 
 
 def train(_config):

@@ -6,7 +6,7 @@ import numpy as np
 
 from demonstration.collect import gather_demonstrations
 from env.robot_envs.parameterized_reach import ParameterizedReachEnv
-from demonstration.policies.parameterized_reach.policy import ParameterizedReachDemonstrationPolicy
+from demonstration.policies.parameterized_reach.parameterized_reach_policy import ParameterizedReachDemonstrationPolicy
 
 
 def check_avg_len(env, demonstration_policy, num_of_averaging_steps=2):

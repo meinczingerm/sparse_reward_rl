@@ -8,9 +8,12 @@ from sb3_contrib.common.wrappers import TimeFeatureWrapper
 from matplotlib import animation
 import matplotlib.pyplot as plt
 from stable_baselines3 import *
+from stable_baselines3.common.callbacks import EventCallback
 from stable_baselines3.common.env_util import make_vec_env
+from stable_baselines3.common.utils import safe_mean
 
-def save_result_gif(env, model, path, filename, frames_to_save=100):
+
+def save_result_gif(env, model, path, filename, frames_to_save=100, deterministic=True):
     """
     Saving result example as gif.
     :param env: gym environment
@@ -28,7 +31,7 @@ def save_result_gif(env, model, path, filename, frames_to_save=100):
     for t in range(frames_to_save):
         # Render to frames buffer
         frames.append(env.render(mode='rgb'))
-        action, _state = model.predict(obs, deterministic=True)
+        action, _state = model.predict(obs, deterministic=deterministic)
         obs, _, done, _ = env.step(action)
         if done:
             obs = env.reset()
@@ -130,6 +133,19 @@ def get_controller_config(controller_type="IK"):
         controller_config['kp'] = 100
     else:
         raise NotImplementedError
+
+
+class SaveBestModelAccordingRollouts(EventCallback):
+    def __init__(self, best_model_save_path):
+        super(SaveBestModelAccordingRollouts, self).__init__()
+        self.best_rollout_reward = 0
+        self.best_model_save_path = best_model_save_path
+
+    def _on_rollout_end(self) -> None:
+        mean_reward = safe_mean([ep_info["r"] for ep_info in self.model.ep_info_buffer])
+        if mean_reward > self.best_rollout_reward:
+            self.best_rollout_reward = mean_reward
+            self.model.save(os.path.join(self.best_model_save_path, "best_rollout_model"))
 
 
 

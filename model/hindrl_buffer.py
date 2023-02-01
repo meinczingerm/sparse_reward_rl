@@ -33,9 +33,11 @@ class DemoDictReplayBufferSamples(NamedTuple):
 class HinDRLReplayBuffer(HerReplayBuffer):
     def __init__(self, demonstration_hdf5, env, hindrl_sampling_strategy: HinDRLSamplingStrategy,
                  demo_to_rollout_ratio=0.025,
-                 buffer_size=int(1e5), union_sampling_ratio=0.5, **kwargs):
+                 buffer_size=int(1e5), union_sampling_ratio=0.5, epsilon_filtering=True, **kwargs):
 
-
+        self.epsilon_filtering = epsilon_filtering
+        self.goal_epsilon = env.envs[0].goal_handler.epsilon
+        assert self.goal_epsilon is not None
         her_sampling_method = {
             HinDRLSamplingStrategy.RolloutConditioned: GoalSelectionStrategy.FUTURE,
             HinDRLSamplingStrategy.JointUnion: GoalSelectionStrategy.FUTURE,
@@ -93,6 +95,7 @@ class HinDRLReplayBuffer(HerReplayBuffer):
             key: np.zeros((self.number_of_demonstrations, self.max_episode_length, *buffer_item.shape[2:]), dtype=np.float32)
             for key, buffer_item in self._buffer.items()
         }
+        self.demo_epsilon_achieved_goals = []
         self._load_demonstrations_to_buffer()
         self.demo_to_rollout_sample_ratio = demo_to_rollout_ratio
 
@@ -130,7 +133,7 @@ class HinDRLReplayBuffer(HerReplayBuffer):
         :param num_of_goals: Number of sampled goals
         :return: Sampled goals (np.array)
         """
-        demo_achieved_goals = self.demonstrations["achieved_goal"]
+        demo_achieved_goals = self.demo_epsilon_achieved_goals
         num_of_demonstrations = len(demo_achieved_goals)
         demonstration_indices = np.random.randint(low=0, high=num_of_demonstrations, size=num_of_goals)
 
@@ -151,6 +154,9 @@ class HinDRLReplayBuffer(HerReplayBuffer):
             episode_achieved_goal = self.demonstrations["achieved_goal"][episode_idx]
             episode_actions = self.demonstrations["actions"][episode_idx]
             episode_goals = self.demonstrations["desired_goals"][episode_idx]
+
+            last_eps_achieved_goal = episode_achieved_goal[0]
+            achieved_goals_in_demo = [last_eps_achieved_goal]
             for timestep_idx in range(episode_observations.shape[0]):
                 obs = {"observation": episode_observations[timestep_idx],
                        "achieved_goal": episode_achieved_goal[timestep_idx],
@@ -179,6 +185,14 @@ class HinDRLReplayBuffer(HerReplayBuffer):
                 self._demo_buffer["next_obs"][episode_idx][timestep_idx] = next_obs["observation"]
                 self._demo_buffer["next_achieved_goal"][episode_idx][timestep_idx] = next_obs["achieved_goal"]
                 self._demo_buffer["next_desired_goal"][episode_idx][timestep_idx] = next_obs["desired_goal"]
+
+                if self.epsilon_filtering:
+                    if np.any(np.abs(obs["achieved_goal"] - last_eps_achieved_goal) > self.goal_epsilon):
+                        achieved_goals_in_demo.append(obs["achieved_goal"])
+                        last_eps_achieved_goal = obs["achieved_goal"]
+                else:
+                    achieved_goals_in_demo.append(obs["achieved_goal"])
+            self.demo_epsilon_achieved_goals.append(np.vstack(achieved_goals_in_demo))
 
     def _sample_transitions_from_demonstrations(self, batch_size: Optional[int], maybe_vec_env: Optional[VecNormalize]):
         episode_indices = np.random.randint(0, self.number_of_demonstrations, batch_size)

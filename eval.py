@@ -14,7 +14,7 @@ from utils import save_result_gif
 
 
 class EvalVideoCallback(EvalCallback):
-    def __init__(self, video_on_percentage_goal, eval_env, **kwargs):
+    def __init__(self, video_on_percentage_goal, eval_env, deterministic=True, frames_to_save=200, **kwargs):
         """
         Init.
         :param video_on_percentage_goal: If not None, then videos will be generated with goals given at percentages of
@@ -26,6 +26,8 @@ class EvalVideoCallback(EvalCallback):
         """
         super(EvalVideoCallback, self).__init__(eval_env, **kwargs)
         self.video_on_percentage_goal = video_on_percentage_goal
+        self.deterministic = deterministic
+        self.frames_to_save = frames_to_save
 
     def _on_step(self) -> bool:
         if self.eval_freq > 0 and self.n_calls % self.eval_freq == 0:
@@ -36,7 +38,7 @@ class EvalVideoCallback(EvalCallback):
     def custom_eval(self):
         if self.video_on_percentage_goal is None:
             save_result_gif(self.eval_env, self.model, self.log_path, filename=f"progress_video{self.num_timesteps}.gif",
-                            frames_to_save=200)
+                            frames_to_save=self.frames_to_save, deterministic=self.deterministic)
         else:
             assert len(self.eval_env.envs) == 1
             original_goal_handler_goal_selection_method = self.eval_env.envs[0].env.goal_handler.goal_selection
@@ -47,7 +49,7 @@ class EvalVideoCallback(EvalCallback):
                 self.eval_env.envs[0].env.goal_handler.percentage_for_rollout_goal = percentage
                 save_result_gif(self.eval_env, self.model, self.log_path,
                                 filename=f"progress_video{self.num_timesteps}_percentage{percentage:.2f}.gif",
-                                frames_to_save=200)
+                                frames_to_save=self.frames_to_save, deterministic=self.deterministic)
 
             self.eval_env.envs[0].env.goal_handler.goal_selection = original_goal_handler_goal_selection_method
             self.eval_env.envs[0].env.goal_handler.percentage_for_rollout_goal = -1

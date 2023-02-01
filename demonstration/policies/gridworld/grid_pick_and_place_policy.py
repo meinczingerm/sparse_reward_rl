@@ -1,5 +1,6 @@
 import numpy as np
 
+from env.grid_world_envs.fixed_pick_and_place import FixedGridPickAndPlace
 from env.grid_world_envs.pick_and_place import GridPickAndPlace
 
 
@@ -120,9 +121,9 @@ class GridPickAndPlacePolicy:
         return obs
 
 if __name__ == '__main__':
-    env = GridPickAndPlace(render_mode="human")
+    env = FixedGridPickAndPlace(render_mode="human", random_box_size=2)
 
-    demonstration_policy = GridPickAndPlacePolicy()
+    demonstration_policy = GridPickAndPlacePolicy(random_action_probability=0)
 
     action = env.action_space.sample()
     obs, _, done, _ = env.step(action)

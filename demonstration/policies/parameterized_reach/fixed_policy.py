@@ -52,7 +52,7 @@ if __name__ == '__main__':
                                              np.array([0.42493,0.07166,0.36318,2.88426,0.12777,0.35920])]
                                              )
 
-    demonstration_policy = FixedParameterizedReachDemonstrationPolicy(env, randomness_scale=0)
+    demonstration_policy = FixedParameterizedReachDemonstrationPolicy(env, randomness_scale=0.1)
 
     action = np.random.uniform(low=env.action_spec[0], high=env.action_spec[1])
     obs, _, done, _ = env.step(action)

@@ -10,7 +10,7 @@ from stable_baselines3.common.callbacks import EvalCallback
 from stable_baselines3.common.vec_env import VecEnvWrapper, VecNormalize, sync_envs_normalization
 
 from env.goal_handler import GoalSelectionMethod
-from utils import save_result_gif
+from tools.utils import save_result_gif
 
 
 class EvalVideoCallback(EvalCallback):

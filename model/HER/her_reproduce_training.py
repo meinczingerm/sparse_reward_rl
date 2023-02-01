@@ -6,8 +6,8 @@ from stable_baselines3 import HerReplayBuffer
 from stable_baselines3.common.callbacks import CallbackList, EvalCallback
 from stable_baselines3.common.env_util import make_vec_env
 
-from eval import EvalVideoCallback
-from utils import create_log_dir, save_dict, get_baseline_model_with_name
+from tools.eval import EvalVideoCallback
+from tools.utils import create_log_dir, save_dict, get_baseline_model_with_name
 
 
 # Example configuration

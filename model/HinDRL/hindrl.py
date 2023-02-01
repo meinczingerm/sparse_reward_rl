@@ -5,28 +5,20 @@ import numpy as np
 import torch as th
 from sb3_contrib import TQC
 from sb3_contrib.common.utils import quantile_huber_loss
-from stable_baselines3.common import noise
 from stable_baselines3.common.callbacks import EvalCallback, CallbackList
 from stable_baselines3.common.env_util import make_vec_env
 from stable_baselines3.common.evaluation import evaluate_policy
 from stable_baselines3.common.monitor import Monitor
-from stable_baselines3.common.noise import NormalActionNoise
 from stable_baselines3.common.utils import polyak_update
 
 from demonstration.collect import gather_demonstrations
-from demonstration.policies.bring_near.bring_near_policy import BringNearDemonstrationPolicy
-from demonstration.policies.gridworld.grid_pick_and_place_policy import GridPickAndPlacePolicy
 from demonstration.policies.parameterized_reach.fixed_parameterized_reach_policy import FixedParameterizedReachDemonstrationPolicy
-from demonstration.policies.parameterized_reach.parameterized_reach_policy import ParameterizedReachDemonstrationPolicy
-from env.goal_handler import HinDRLGoalHandler, DefinedDistanceGoalHandler
-from env.grid_world_envs.fixed_pick_and_place import FixedGridPickAndPlace
+from env.goal_handler import HinDRLGoalHandler
 from env.grid_world_envs.pick_and_place import GridPickAndPlace
-from env.robot_envs.bring_near import BringNearEnv
 from env.robot_envs.fixed_parameterized_reach import FixedParameterizedReachEnv
-from env.robot_envs.parameterized_reach import ParameterizedReachEnv
-from eval import EvalVideoCallback
-from model.hindrl_buffer import HinDRLReplayBuffer, HinDRLSamplingStrategy
-from utils import create_log_dir, save_dict, SaveBestModelAccordingRollouts
+from tools.eval import EvalVideoCallback
+from model.HinDRL.hindrl_buffer import HinDRLReplayBuffer, HinDRLSamplingStrategy
+from tools.utils import create_log_dir, save_dict, SaveBestModelAccordingRollouts
 
 
 class HinDRL(TQC):

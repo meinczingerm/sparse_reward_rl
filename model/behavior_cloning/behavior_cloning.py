@@ -13,14 +13,9 @@ from torch import nn, optim
 from torch.utils.data import Dataset, DataLoader
 
 from demonstration.collect import gather_demonstrations
-from demonstration.policies.gridworld.grid_pick_and_place_policy import GridPickAndPlacePolicy
 from demonstration.policies.parameterized_reach.fixed_parameterized_reach_policy import FixedParameterizedReachDemonstrationPolicy
-from demonstration.policies.parameterized_reach.parameterized_reach_policy import ParameterizedReachDemonstrationPolicy
-from env.grid_world_envs.fixed_pick_and_place import FixedGridPickAndPlace
-from env.grid_world_envs.pick_and_place import GridPickAndPlace
 from env.robot_envs.fixed_parameterized_reach import FixedParameterizedReachEnv
-from env.robot_envs.parameterized_reach import ParameterizedReachEnv
-from utils import get_project_root_path, save_result_gif, save_dict
+from tools.utils import get_project_root_path, save_result_gif, save_dict
 
 
 class DemonstrationDataset(Dataset):

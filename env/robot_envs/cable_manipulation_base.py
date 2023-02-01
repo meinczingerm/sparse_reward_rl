@@ -15,7 +15,7 @@ from robosuite.models.tasks import ManipulationTask
 from robosuite.utils.observables import Observable, sensor
 
 from env.goal_handler import HinDRLGoalHandler
-from utils import get_project_root_path
+from tools.utils import get_project_root_path
 
 
 class CableManipulationBase(TwoArmEnv):

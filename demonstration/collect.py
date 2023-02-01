@@ -18,7 +18,7 @@ from robosuite.wrappers import VisualizationWrapper
 
 from demonstration.observation_collection_wrapper import RobosuiteObservationCollectionWrapper, \
     GridWorldDataCollectionWrapper
-from utils import get_project_root_path
+from tools.utils import get_project_root_path
 
 
 def run_demonstration_episode(env, policy, render=True):

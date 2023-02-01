@@ -14,6 +14,7 @@ from utils import save_result_gif
 
 
 class EvalVideoCallback(EvalCallback):
+    """Callback used by the lightning module. It saves .gif-s during the evaluation."""
     def __init__(self, video_on_percentage_goal, eval_env, deterministic=True, frames_to_save=200, **kwargs):
         """
         Init.
@@ -21,8 +22,10 @@ class EvalVideoCallback(EvalCallback):
                                          the rollout. For example for the value 0.1, 10 video will be generated, where
                                          the first video is with a goal from a rollout at 10% the 2nd video with 20%
                                          etc.
-        :param eval_env:
-        :param kwargs:
+        :param deterministic: if True, then the policy behaves determinstic
+        :param frames_to_save: number of frames to save into the .gif
+        :param eval_env: evaluation env instance
+        :param kwargs: not used
         """
         super(EvalVideoCallback, self).__init__(eval_env, **kwargs)
         self.video_on_percentage_goal = video_on_percentage_goal

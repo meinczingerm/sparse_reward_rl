@@ -13,6 +13,7 @@ from stable_baselines3.common.monitor import Monitor
 from stable_baselines3.common.noise import NormalActionNoise
 from stable_baselines3.common.utils import polyak_update
 
+from demonstration.collect import gather_demonstrations
 from demonstration.policies.bring_near.bring_near_policy import BringNearDemonstrationPolicy
 from demonstration.policies.gridworld.grid_pick_and_place_policy import GridPickAndPlacePolicy
 from demonstration.policies.parameterized_reach.fixed_policy import FixedParameterizedReachDemonstrationPolicy
@@ -25,7 +26,6 @@ from env.robot_envs.fixed_parameterized_reach import FixedParameterizedReachEnv
 from env.robot_envs.parameterized_reach import ParameterizedReachEnv
 from eval import EvalVideoCallback
 from model.hindrl_buffer import HinDRLReplayBuffer, HinDRLSamplingStrategy
-from train import _collect_demonstration
 from utils import create_log_dir, save_dict, SaveBestModelAccordingRollouts
 
 
@@ -203,8 +203,8 @@ def train(_config):
         expert_policy = _config["expert_policy"]
         if hasattr(expert_policy, "add_env"):
             expert_policy.add_env(env.envs[0].env)
-        demo_path = _collect_demonstration(env.envs[0].env, demonstration_policy=expert_policy,
-                                           episode_num=_config["number_of_demonstrations"])
+        demo_path = gather_demonstrations(env.envs[0].env, demonstration_policy=expert_policy,
+                                          episode_num=_config["number_of_demonstrations"])
     else:
         demo_path = _config["demo_path"]
 

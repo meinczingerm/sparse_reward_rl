@@ -19,8 +19,7 @@ from env.grid_world_envs.fixed_pick_and_place import FixedGridPickAndPlace
 from env.grid_world_envs.pick_and_place import GridPickAndPlace
 from env.robot_envs.fixed_parameterized_reach import FixedParameterizedReachEnv
 from env.robot_envs.parameterized_reach import ParameterizedReachEnv
-from train import _collect_demonstration
-from utils import get_project_root_path, save_result_gif, save_dict
+from utils import get_project_root_path, save_result_gif, save_dict, gather_demonstrations
 
 
 class DemonstrationDataset(Dataset):
@@ -109,10 +108,10 @@ def train_bc(_config):
         expert_policy = _config["expert_policy"]
         if hasattr(expert_policy, "add_env"):
             expert_policy.add_env(env)
-        training_demo_path = _collect_demonstration(env, demonstration_policy=expert_policy,
-                                           episode_num=_config["number_of_demonstrations"])
-        validation_demo_path = _collect_demonstration(env, demonstration_policy=expert_policy,
-                                           episode_num=40)
+        training_demo_path = gather_demonstrations(env, demonstration_policy=expert_policy,
+                                                   episode_num=_config["number_of_demonstrations"])
+        validation_demo_path = gather_demonstrations(env, demonstration_policy=expert_policy,
+                                                     episode_num=40)
     else:
         training_demo_path = _config["training_demo_path"]
         validation_demo_path = _config["validation_demo_path"]

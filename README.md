@@ -1,26 +1,92 @@
-<h1>Master Thesis</h1>
+<h1>Demonstration Utilization for Sparse Reward Deep Reinforcelment Learning</h1>
 
-<h2>Goal</h2>The goal of this project is to recreate the method "HinDRL" presented in  the article "FOR LONG-HORIZON DEXTEROUS MANIPULATION" (https://arxiv.org/pdf/2112.00597.pdf)
+<h2>Project Description</h2>This project was implemented as part of my
+Master's Thesis. The goal of this project is to implement and compare different
+different methods of incorporating demonstrations to ease the sparse reward reinforcement learning
+problem. The experiment results are described in the Thesis itself. This
+repository can serve as a basis for future research by either using the models, the implemented environments, or the hardcoded policies used for gathering demosntrations.
 
 <h2>Features</h2>
-<h3>Bimanual cable insertion environment</h3>The environment copies the task of bimanual
-cable insertion presented in the paper:
-<img src=readme_imgs/bimanual_cable_env.png> 
+<h3>Environments</h3>
+I present my environments below, but for a more complete description, I suggest reading the specific
+part of the Thesis.
+<h4>GridWorld Environments</h4>
+As a simplified version of the robotic tasks implemented by Davchev et al. in 2022
+(https://openreview.net/forum?id=FKp8-pIRo3y) I implemented some grid world environments.
+This environment represents the main complexities of the original tasks.
+<h5>PickAndPlace Env</h5>
+In this environment the agent (blue dot) has to transfer all of the objects
+(green dot) to the target grid (red rectangle) in the specified order represented
+by the numbering of the objects. All the objects, the agent and the target is
+initialized randomly. The agent has two type of actions moving
+("up", "down", "left", "right") and grabbing (1="on" or 0="off"). If the agent
+places the wrong object into the target or releases the object before reaching
+the target the object will be teleported away. The reward for this task is a simple
+sparse reward, meaning that the reward is "1" when the last object reaches
+the target  rectangle and "0" otherwise.
+<p align="center">
+<img src=readme_imgs/orig_grid_world.jpg width="200">
+</p>
 
-This environment can be tested with random actions by running
-env/run.py.
+
+<h5>FixedPickAndPlace Env</h5>
+This is the constrained version of the environment described above. The only difference
+is in the initialization of the environment. The objects, the agent and the target
+grid is all randomized within predefined regions (marked with yellow rectangle). Thanks to
+the constraint this environment is better at testing the positive effect of demonstrations,
+because the task and the required movements are close to being the same and so the demonstration
+provides more information during the training.
+<p align="center">
+<img src=readme_imgs/fixed_pick_and_place.jpg width="200">
+</p>
+
+<h4>Robotic Environments</h4>
+I implemented similar robotic environments in Mujoco as it was used in the work of
+Davchev et al. (2022) (https://openreview.net/forum?id=FKp8-pIRo3y). These environments
+are not the exact same as it was used there, but I aimed to recreate their tasks as close
+as possible.
+<h4>FixedParameterizedReach</h4>
+In this task the robotarm has to reach predefined poses (green capsulers) in the defined order. The returned reward is
+a simple sparse reward, returning "1" when the last pose is reached and "0" otherwise.
+<p align="center">
+<img src=readme_imgs/parameterized_reach.jpg width="200"> 
+</p>
+
+<h4>BringNearEnv</h4>
+In this task both the robotarm has to grab their respective cable and bring them close
+to each other.
+<p align="center">
+<img src=readme_imgs/bring_near_solved.jpg width="200"> 
+</p>
+
+<h4>CableInsertion</h4>
+In this task both the robotarm has to grab their respective cable and bring them close
+to each other and finally insert them together.
+<p align="center">
+<img src=readme_imgs/cable_insertion_solved.jpg width="200"> 
+</p>
 
 <h3>Demonstration policy</h3>
-There is also a simple controller implemented in demonstration/policy.py
-which solves the insertion task. (Note: The controller is not 100% robust
-because of the non-deterministic behaviour of mujoco the cable-s are slipping to
-slightly different positions and the task fails around 10% of the time.)
+There is a demonstration policy (https://github.com/meinczingerm/master_thesis/blob/19eef27a1fa55e10ecac9a5613d89aa3242a58e4/demonstration/policies) for each environment listed above, which can be used for
+automatically generating (and recording) demonstrations. I have to note that these policies are not fail proof
+in some cases they are unable to solve the more complex tasks. This problem is resolved in the
+demonstration gathering phase, where only successful demonstrations are stored.
 
 <h2>Setup</h2>
 The project is dependent on the robosuite framework. To setup this
 framework simply follow the installation guide at https://robosuite.ai/docs/installation.html. (The project
 was tested with version 1.3.2 older versions can cause incompatibility issues, if you only manage to
-install older versions checkout 2nd point in Known issues.)
+install older versions checkout 2nd point in Known issues.) All other dependency is listed in the environment.yml file.
+
+<h3>Models</h3>
+I implemented 3 models: 
+1. Behavior Cloning (BC): Simple supervised model with input observation x and target y action used
+in the demonstration.
+2. TQCfD based on the model DDPGfD (Deep Deterministic Policy Gradient from Demonstration introduced in http://proceedings.mlr.press/v87/matas18a.html).
+3. HinDRL based on the model of Davchev et al. (2022) (https://openreview.net/forum?id=FKp8-pIRo3y)
+
+I explain the implementation details and the models themselves in the thesis, for a more clear understanding
+I suggest reading chapter 4. (Methodology).
 
 <h3>Known issues</h3>
 

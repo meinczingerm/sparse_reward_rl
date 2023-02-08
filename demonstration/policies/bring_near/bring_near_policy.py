@@ -66,6 +66,9 @@ class RobotStages:
 
 
 class BringNearDemonstrationPolicy:
+    """
+    Policy for creatong demonstrations for the BringNear env.
+    """
     def __init__(self):
         self.robot_stages = None
         self.reset()

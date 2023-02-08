@@ -9,7 +9,6 @@ from matplotlib import animation
 import matplotlib.pyplot as plt
 from stable_baselines3 import *
 from stable_baselines3.common.callbacks import EventCallback
-from stable_baselines3.common.env_util import make_vec_env
 from stable_baselines3.common.utils import safe_mean
 
 
@@ -113,21 +112,12 @@ def save_dict(data_dict, path):
         json.dump(str(data_dict), f)
 
 
-def setup_training(config):
-    print("creating env")
-    env = make_vec_env(config['env']['name'], n_envs=config['env']['env_num'], wrapper_class=config['env']['env_wrapper'],
-                       wrapper_kwargs=config['env']['env_wrapper_kwargs'])
-
-    log_dir = create_log_dir(config['env']['name'])
-    config['model']['kwargs']['tensorboard_log'] = log_dir
-    save_dict(config, os.path.join(log_dir, 'config.json'))
-
-    print("env ready")
-    model = get_baseline_model_with_name(config["model"]["name"], config["model"]["kwargs"], env=env)
-    return env, model, log_dir
-
-
 def get_controller_config(controller_type="IK"):
+    """
+    Returns default controller config dict.
+    :param controller_type: type of controller to use, currently only "IK" (inverse kinematic) is supported
+    :return:
+    """
     if controller_type == "IK":
         controller_config = load_controller_config(default_controller="IK_POSE")
         controller_config['kp'] = 100
@@ -136,7 +126,14 @@ def get_controller_config(controller_type="IK"):
 
 
 class SaveBestModelAccordingRollouts(EventCallback):
+    """
+    Callback class for saving the model, when a new performance peak is reached according to the rollout success rate.
+    """
     def __init__(self, best_model_save_path):
+        """
+        Init.
+        :param best_model_save_path: path where the model will be saved
+        """
         super(SaveBestModelAccordingRollouts, self).__init__()
         self.best_rollout_reward = 0
         self.best_model_save_path = best_model_save_path

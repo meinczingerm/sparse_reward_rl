@@ -4,13 +4,13 @@ from pathlib import Path
 import h5py
 import numpy as np
 
+from demonstration.collect import gather_demonstrations
 from env.robot_envs.parameterized_reach import ParameterizedReachEnv
-from demonstration.policies.parameterized_reach.policy import ParameterizedReachDemonstrationPolicy
-from train import _collect_demonstration
+from demonstration.policies.parameterized_reach.parameterized_reach_policy import ParameterizedReachDemonstrationPolicy
 
 
 def check_avg_len(env, demonstration_policy, num_of_averaging_steps=2):
-    demo_path = _collect_demonstration(env, demonstration_policy=demonstration_policy,
+    demo_path = gather_demonstrations(env, demonstration_policy=demonstration_policy,
                            episode_num=num_of_averaging_steps)
     demo_path = Path(demo_path)
     demo_dir_path = demo_path.parent.absolute()
@@ -28,6 +28,10 @@ def check_avg_len(env, demonstration_policy, num_of_averaging_steps=2):
 
 
 def check_frequency():
+    """
+    Returns the average len (number of steps) for a demonstration with given config.
+    :return:
+    """
     env = ParameterizedReachEnv()
     demonstration_policy = ParameterizedReachDemonstrationPolicy()
 

@@ -12,19 +12,19 @@ from stable_baselines3.common.vec_env import VecEnv, DummyVecEnv
 from torch import nn, optim
 from torch.utils.data import Dataset, DataLoader
 
-from demonstration.policies.gridworld.grid_pick_and_place_policy import GridPickAndPlacePolicy
-from demonstration.policies.parameterized_reach.fixed_policy import FixedParameterizedReachDemonstrationPolicy
-from demonstration.policies.parameterized_reach.policy import ParameterizedReachDemonstrationPolicy
-from env.grid_world_envs.fixed_pick_and_place import FixedGridPickAndPlace
-from env.grid_world_envs.pick_and_place import GridPickAndPlace
+from demonstration.collect import gather_demonstrations
+from demonstration.policies.parameterized_reach.fixed_parameterized_reach_policy import FixedParameterizedReachDemonstrationPolicy
 from env.robot_envs.fixed_parameterized_reach import FixedParameterizedReachEnv
-from env.robot_envs.parameterized_reach import ParameterizedReachEnv
-from train import _collect_demonstration
-from utils import get_project_root_path, save_result_gif, save_dict
+from tools.utils import get_project_root_path, save_result_gif, save_dict
 
 
 class DemonstrationDataset(Dataset):
+    """Supervised dataset containing demonstration data"""
     def __init__(self, demonstration_hdf5):
+        """
+        Init.
+        :param demonstration_hdf5: Path to demonstration .hdf5 file.
+        """
         self.demonstrations = {"observations": [],
                                "desired_goals": [],
                                "actions": []}
@@ -92,7 +92,12 @@ class BCModule(pl.LightningModule):
         optimizer = optim.Adam(self.parameters(), **self.optimizer_kwargs)
         return optimizer
 
+
 def _get_model(_config):
+    """
+    Get TQC model with config. Later on the policy will be extracted as the trained model.
+    Note: data normalization process is the same as used by the TQC policy.
+    """
     model = TQC(env=_config['env_class'](**_config["env_kwargs"]), policy="MultiInputPolicy",
                 policy_kwargs={**_config["model"]["policy_kwargs"]})
     return model
@@ -109,10 +114,10 @@ def train_bc(_config):
         expert_policy = _config["expert_policy"]
         if hasattr(expert_policy, "add_env"):
             expert_policy.add_env(env)
-        training_demo_path = _collect_demonstration(env, demonstration_policy=expert_policy,
-                                           episode_num=_config["number_of_demonstrations"])
-        validation_demo_path = _collect_demonstration(env, demonstration_policy=expert_policy,
-                                           episode_num=40)
+        training_demo_path = gather_demonstrations(env, demonstration_policy=expert_policy,
+                                                   episode_num=_config["number_of_demonstrations"])
+        validation_demo_path = gather_demonstrations(env, demonstration_policy=expert_policy,
+                                                     episode_num=40)
     else:
         training_demo_path = _config["training_demo_path"]
         validation_demo_path = _config["validation_demo_path"]
@@ -134,6 +139,7 @@ def train_bc(_config):
 
     print("Done")
 
+
 def run_parallel(_configs):
     pool = Pool(processes=len(_configs))
 
@@ -143,6 +149,13 @@ def run_parallel(_configs):
 
 
 def load_and_eval(log_dir, _config, num_of_eval_videos=5):
+    """
+    Loads back and evaluates the saved model.
+    :param log_dir: log_dir path including the saved model
+    :param _config: config of the trained model
+    :param num_of_eval_videos: number of videos to generate during the evaluation
+    :return: None
+    """
     checkpoint_path = os.path.join(log_dir, "checkpoints")
     file_name = os.listdir(checkpoint_path)[0]
     checkpoint_path = os.path.join(checkpoint_path, file_name)
@@ -160,65 +173,8 @@ def load_and_eval(log_dir, _config, num_of_eval_videos=5):
 
 
 if __name__ == '__main__':
-    # config = {"env_kwargs": {"number_of_waypoints": 2},
-    #           "env_class": ParameterizedReachEnv,
-    #           "number_of_demonstrations": 1000,
-    #           "regenerate_demonstrations": True,
-    #           "training_demo_path": None,
-    #           "validation_demo_path": None,
-    #           "expert_policy": ParameterizedReachDemonstrationPolicy(),
-    #           "model": {"batch_size": 2048,
-    #                     "policy_kwargs": {"net_arch": [64, 64]},
-    #                     "optimizer_kwargs": {"lr": 1e-3,
-    #                                          "weight_decay": 1e-4}}}
 
-    # configs = [{"env_kwargs": {"random_box_size": 2,
-    #                             "size": 10,
-    #                            "number_of_objects": 2,
-    #                            "horizon": 100},
-    #             "env_class": FixedGridPickAndPlace,
-    #             "number_of_demonstrations": 5,
-    #             "regenerate_demonstrations": True,
-    #             "training_demo_path": None,
-    #             "validation_demo_path": None,
-    #             "expert_policy": GridPickAndPlacePolicy(),
-    #             "use_policy_wrapper": False,
-    #             "model": {"batch_size": 2048,
-    #                       "policy_kwargs": {"net_arch": [32, 32]},
-    #                       "optimizer_kwargs": {"lr": 1e-3}}
-    #             },
-    #            {"env_kwargs": {"random_box_size": 2,
-    #                            "size": 10,
-    #                            "number_of_objects": 2,
-    #                            "horizon": 100},
-    #             "env_class": FixedGridPickAndPlace,
-    #             "number_of_demonstrations": 2,
-    #             "regenerate_demonstrations": True,
-    #             "training_demo_path": None,
-    #             "validation_demo_path": None,
-    #             "expert_policy": GridPickAndPlacePolicy(),
-    #             "use_policy_wrapper": False,
-    #             "model": {"batch_size": 2048,
-    #                       "policy_kwargs": {"net_arch": [32, 32]},
-    #                       "optimizer_kwargs": {"lr": 1e-3}}
-    #             },
-    #            {"env_kwargs": {"random_box_size": 2,
-    #                            "size": 10,
-    #                            "number_of_objects": 2,
-    #                            "horizon": 100},
-    #             "env_class": FixedGridPickAndPlace,
-    #             "number_of_demonstrations": 1,
-    #             "regenerate_demonstrations": True,
-    #             "training_demo_path": None,
-    #             "validation_demo_path": None,
-    #             "expert_policy": GridPickAndPlacePolicy(),
-    #             "use_policy_wrapper": False,
-    #             "model": {"batch_size": 2048,
-    #                       "policy_kwargs": {"net_arch": [32, 32]},
-    #                       "optimizer_kwargs": {"lr": 1e-3}}
-    #             },
-    #            ]
-
+    # Example config
     configs = [
                 {"env_kwargs": {"horizon": 300, "number_of_waypoints": 2,
                         "waypoints": [np.array([0.58766, 0.26816, 0.37820, 2.89549, 0.03567, -0.39348]),
@@ -267,15 +223,7 @@ if __name__ == '__main__':
                  },
                ]
 
-    # train_bc(configs[0])
-
     run_parallel(configs)
-
-
-
-    # load_and_eval("/home/mark/tum/2022ss/thesis/master_thesis/training_logs/BC_model_ParameterizedReach_2Waypoint/version_2",
-    #               config)
-
 
 
 

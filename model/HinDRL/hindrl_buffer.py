@@ -15,7 +15,15 @@ from stable_baselines3.common.utils import polyak_update
 from stable_baselines3.common.vec_env import VecNormalize
 from stable_baselines3.her import GoalSelectionStrategy
 
+
 class HinDRLSamplingStrategy(Enum):
+    """
+    Goal selection strategies used by the HinDRL buffer.
+    RolloutConditioned: goal sampled from the same rollout as the original sample (equivalent to HER future)
+    TaskConditioned: goal sampled from the demonstration buffer with uniform distribution
+    JointUnion: mixture of samples from both strategies above
+    JointIntersection: Not implemented
+    """
     RolloutConditioned = 0
     TaskConditioned = 1
     JointUnion = 2
@@ -31,9 +39,25 @@ class DemoDictReplayBufferSamples(NamedTuple):
 
 
 class HinDRLReplayBuffer(HerReplayBuffer):
+    """
+    HinDRL replay buffer with the modification of different Goal sampling strategies.
+    """
     def __init__(self, demonstration_hdf5, env, hindrl_sampling_strategy: HinDRLSamplingStrategy,
-                 demo_to_rollout_ratio=0.025,
+                 relabeling_ratio=0.025,
                  buffer_size=int(1e5), union_sampling_ratio=0.5, epsilon_filtering=True, **kwargs):
+        """
+        Init
+        :param demonstration_hdf5: path to the demonstration .hdf5 file
+        :param env: environment instance
+        :param hindrl_sampling_strategy: strategy (HinDRLSamplingStrategy) used for goal sampling
+        :param relabeling_ratio: defines the ratio of the samples with relabeled goals to original goals
+        :param buffer_size: buffer size
+        :param union_sampling_ratio: defines the proportion of demo constrained and rollout constrained sampled goals
+                                     for the HinDRLSamplingStrategy.JointUnion strategy (not used otherwise)
+        :param epsilon_filtering: if True, then only demonstration with at least epsilon-distance will be added to the
+                                  demo buffer
+        :param kwargs: additional kwargs for the HerReplayBuffer
+        """
 
         self.epsilon_filtering = epsilon_filtering
         self.goal_epsilon = env.envs[0].goal_handler.epsilon
@@ -97,7 +121,7 @@ class HinDRLReplayBuffer(HerReplayBuffer):
         }
         self.demo_epsilon_achieved_goals = []
         self._load_demonstrations_to_buffer()
-        self.demo_to_rollout_sample_ratio = demo_to_rollout_ratio
+        self.relabeling_ratio = relabeling_ratio
 
 
     def sample_goals(self, episode_indices: np.ndarray, her_indices: np.ndarray, transitions_indices: np.ndarray,
@@ -244,7 +268,7 @@ class HinDRLReplayBuffer(HerReplayBuffer):
         :return: Samples.
         """
         # Select which episodes to use
-        batch_size_from_demo = int(self.demo_to_rollout_sample_ratio * batch_size)
+        batch_size_from_demo = int(self.relabeling_ratio * batch_size)
         batch_size_from_rollout = batch_size - batch_size_from_demo
         if online_sampling:
             assert batch_size is not None, "No batch_size specified for online sampling of HER transitions"

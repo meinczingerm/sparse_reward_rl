@@ -18,7 +18,7 @@ from robosuite.wrappers import VisualizationWrapper
 
 from demonstration.observation_collection_wrapper import RobosuiteObservationCollectionWrapper, \
     GridWorldDataCollectionWrapper
-from utils import get_project_root_path
+from tools.utils import get_project_root_path
 
 
 def run_demonstration_episode(env, policy, render=True):
@@ -206,3 +206,23 @@ def collect_demonstrations(env, env_config: dict, demonstration_policy, episode_
 
     gather_demonstrations_as_hdf5(tmp_directory, new_dir, env_config)
     return os.path.join(new_dir, "demo.hdf5")
+
+
+def gather_demonstrations(env, demonstration_policy, episode_num):
+    """
+    Collect demonstrations following the demonstration policy.
+    :param env: environment instance
+    :param demonstration_policy: demonstration policy instance
+    :param episode_num: number of succesful episodes to collect
+    :return:
+    """
+    if hasattr(env, "envs"):
+        env_name = env.envs[0].name
+    else:
+        env_name = env.name
+    env_config = {
+        'env_name': env_name
+    }
+    demo_path = collect_demonstrations(env, env_config=env_config, demonstration_policy=demonstration_policy,
+                                 episode_num=episode_num)
+    return demo_path

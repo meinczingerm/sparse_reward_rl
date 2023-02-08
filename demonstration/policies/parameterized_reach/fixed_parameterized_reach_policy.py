@@ -6,7 +6,10 @@ from env.robot_envs.parameterized_reach import ParameterizedReachEnv
 
 class FixedParameterizedReachDemonstrationPolicy:
     """
-    Demonstration policy for the ParameterizedReachEnv with IK control.
+    Demonstration policy for the FixedParameterizedReachEnv with IK control. The difference to the simple
+    ParameterizedReachDemonstrationPolicy is that for the FixedParameterizedReachEnv the observations do not contain
+    information about the required poses, so the required pose is extracted in another way for the demo policy.
+    Note: the trained policy has to learn the required poses relying only on the demonstrations.
     """
     def __init__(self, env:FixedParameterizedReachEnv, randomness_scale=0.05):
         self.env = env

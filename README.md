@@ -76,7 +76,17 @@ demonstration gathering phase, where only successful demonstrations are stored.
 The project is dependent on the robosuite framework. To setup this
 framework simply follow the installation guide at https://robosuite.ai/docs/installation.html. (The project
 was tested with version 1.3.2 older versions can cause incompatibility issues, if you only manage to
-install older versions checkout 2nd point in Known issues.)
+install older versions checkout 2nd point in Known issues.) All other dependency is listed in the environment.yml file.
+
+<h3>Models</h3>
+I implemented 3 models: 
+1. Behavior Cloning (BC): Simple supervised model with input observation x and target y action used
+in the demonstration.
+2. TQCfD based on the model DDPGfD (Deep Deterministic Policy Gradient from Demonstration introduced in http://proceedings.mlr.press/v87/matas18a.html).
+3. HinDRL based on the model of Davchev et al. (2022) (https://openreview.net/forum?id=FKp8-pIRo3y)
+
+I explain the implementation details and the models themselves in the thesis, for a more clear understanding
+I suggest reading chapter 4. (Methodology).
 
 <h3>Known issues</h3>
 

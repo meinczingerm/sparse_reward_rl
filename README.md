@@ -72,12 +72,6 @@ automatically generating (and recording) demonstrations. I have to note that the
 in some cases they are unable to solve the more complex tasks. This problem is resolved in the
 demonstration gathering phase, where only successful demonstrations are stored.
 
-<h2>Setup</h2>
-The project is dependent on the robosuite framework. To setup this
-framework simply follow the installation guide at https://robosuite.ai/docs/installation.html. (The project
-was tested with version 1.3.2 older versions can cause incompatibility issues, if you only manage to
-install older versions checkout 2nd point in Known issues.) All other dependency is listed in the environment.yml file.
-
 <h3>Models</h3>
 I implemented 3 models: 
 1. Behavior Cloning (BC): Simple supervised model with input observation x and target y action used
@@ -87,6 +81,12 @@ in the demonstration.
 
 I explain the implementation details and the models themselves in the thesis, for a more clear understanding
 I suggest reading chapter 4. (Methodology).
+
+<h2>Setup</h2>
+The project is dependent on the robosuite framework. To setup this
+framework simply follow the installation guide at https://robosuite.ai/docs/installation.html. (The project
+was tested with version 1.3.2 older versions can cause incompatibility issues, if you only manage to
+install older versions checkout 2nd point in Known issues.) All other dependency is listed in the environment.yml file.
 
 <h3>Known issues</h3>
 
